@@ -1,0 +1,23 @@
+{
+  "name": "@sales-curiosity/extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/copy-manifest.mjs && esbuild src/background.ts src/content.ts src/popup.tsx --bundle --outdir=dist --format=esm --target=chrome120 --sourcemap --watch",
+    "build": "esbuild src/background.ts src/content.ts src/popup.tsx --bundle --outdir=dist --format=esm --target=chrome120 --sourcemap && node scripts/copy-manifest.mjs",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.269",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "esbuild": "^0.23.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^4.1.11"
+  }
+}

@@ -1,7 +1,2 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
-};
-
-export default nextConfig;
+// Intentionally left minimal at root; app-specific config in apps/sales-curiosity-web/next.config.ts
+export {};

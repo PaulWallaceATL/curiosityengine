@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "lib": ["dom", "es2021"],
+    "module": "esnext",
+    "target": "es2021",
+    "jsx": "react-jsx",
+    "types": ["chrome"]
+  },
+  "include": ["src/**/*"]
+}
+

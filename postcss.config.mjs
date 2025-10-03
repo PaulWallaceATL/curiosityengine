@@ -1,5 +1,2 @@
-const config = {
-  plugins: ["@tailwindcss/postcss"],
-};
-
-export default config;
+// Root PostCSS not used; each app has its own config.
+export default {};
