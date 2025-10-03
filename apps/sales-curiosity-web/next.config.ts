@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    optimizePackageImports: [
+      "react",
+      "react-dom",
+    ],
+  },
 };
 
 export default nextConfig;
