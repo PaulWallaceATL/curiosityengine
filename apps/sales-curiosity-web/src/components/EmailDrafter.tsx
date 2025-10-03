@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "./ui/useToast";
+import { useEffect, useRef } from "react";
 
 export default function EmailDrafter() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -10,6 +12,17 @@ export default function EmailDrafter() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ subject: string; body: string } | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    function onFocus() {
+      inputRef.current?.focus();
+    }
+    window.addEventListener("focus-email-drafter", onFocus as EventListener);
+    return () => window.removeEventListener("focus-email-drafter", onFocus as EventListener);
+  }, []);
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   async function draft(e: React.FormEvent) {
     e.preventDefault();
@@ -25,8 +38,10 @@ export default function EmailDrafter() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to draft email");
       setResult({ subject: data.subject, body: data.body });
+      toast({ title: "Draft ready", description: "Your AI-drafted email is ready.", variant: "success" });
     } catch (e: any) {
       setError(e.message);
+      toast({ title: "Draft failed", description: e.message, variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -34,6 +49,7 @@ export default function EmailDrafter() {
 
   function copy(text: string) {
     navigator.clipboard.writeText(text);
+    toast({ title: "Copied", description: "Copied to clipboard", variant: "info", durationMs: 1500 });
   }
 
   return (
@@ -46,6 +62,7 @@ export default function EmailDrafter() {
             placeholder="https://www.linkedin.com/in/..."
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
+            ref={inputRef}
           />
         </div>
         <div className="grid gap-1.5">
@@ -62,7 +79,7 @@ export default function EmailDrafter() {
           <label className="text-xs text-zinc-600 dark:text-zinc-300">Optional: pasted LinkedIn profile content</label>
           <textarea
             rows={6}
-            className="resize-none rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
+            className="skeleton resize-none rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
             placeholder="Paste scraped content here to improve personalization"
             value={linkedinContent}
             onChange={(e) => setLinkedinContent(e.target.value)}
@@ -92,7 +109,7 @@ export default function EmailDrafter() {
         </button>
         {error && <p className="text-xs text-red-600">{error}</p>}
         {result && (
-          <div className="rounded-lg border bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="card-surface rounded-lg border bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
             <div className="mb-2 flex items-center justify-between">
               <strong>Subject</strong>
               <button className="text-xs underline" onClick={(e) => { e.preventDefault(); copy(result.subject); }}>Copy</button>

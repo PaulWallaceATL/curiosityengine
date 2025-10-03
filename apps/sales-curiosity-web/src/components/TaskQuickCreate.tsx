@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "./ui/useToast";
+import { useEffect, useRef } from "react";
 
 export default function TaskQuickCreate() {
   const [type, setType] = useState<"research" | "email" | "briefing">("research");
@@ -8,6 +10,16 @@ export default function TaskQuickCreate() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    function onOpen() {
+      inputRef.current?.focus();
+    }
+    window.addEventListener("open-quick-task", onOpen as EventListener);
+    return () => window.removeEventListener("open-quick-task", onOpen as EventListener);
+  }, []);
 
   async function createTask(e: React.FormEvent) {
     e.preventDefault();
@@ -25,15 +37,17 @@ export default function TaskQuickCreate() {
       setDescription("");
       setSuccess(true);
       setTimeout(() => setSuccess(false), 1500);
+      toast({ title: "Task created", description: "Task added to Admin dashboard.", variant: "success" });
     } catch (e: any) {
       setError(e.message);
+      toast({ title: "Task failed", description: e.message, variant: "error" });
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={createTask} className="rounded-xl border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <form onSubmit={createTask} className="card-surface rounded-xl border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="text-base font-medium">Quick task</h2>
       <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Create a task that will appear in the Admin dashboard.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -56,12 +70,13 @@ export default function TaskQuickCreate() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What should we do?"
+            ref={inputRef}
           />
         </div>
         <div className="sm:col-span-2 flex items-center gap-3">
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+            className="pressable inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
             disabled={loading || !description}
           >
             {loading ? "Creating…" : "Create task"}
