@@ -3,6 +3,14 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
 
+type Page = "home" | "context" | "integrations";
+type ActionType = "analyze" | "email";
+
+interface UserContext {
+  aboutMe: string;
+  objectives: string;
+}
+
 function Popup() {
   const [apiBase, setApiBase] = useState<string>(
     (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) ||
@@ -13,6 +21,14 @@ function Popup() {
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [profileData, setProfileData] = useState<any>(null);
+  
+  // Navigation state
+  const [currentPage, setCurrentPage] = useState<Page>("home");
+  const [actionType, setActionType] = useState<ActionType | null>(null);
+  const [emailContext, setEmailContext] = useState<string>("");
+  
+  // User context state
+  const [userContext, setUserContext] = useState<UserContext>({ aboutMe: "", objectives: "" });
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -47,6 +63,33 @@ function Popup() {
     }
     checkAuth();
   }, []);
+
+  // Load user context from storage
+  useEffect(() => {
+    async function loadContext() {
+      try {
+        const result = await chrome.storage.local.get(['userContext']);
+        if (result.userContext) {
+          setUserContext(result.userContext);
+        }
+      } catch (e) {
+        console.error("Error loading context:", e);
+      }
+    }
+    if (isAuthenticated) {
+      loadContext();
+    }
+  }, [isAuthenticated]);
+
+  // Save user context to storage
+  async function saveUserContext(context: UserContext) {
+    try {
+      await chrome.storage.local.set({ userContext: context });
+      setUserContext(context);
+    } catch (e) {
+      console.error("Error saving context:", e);
+    }
+  }
 
   // Get current tab URL on mount
   useEffect(() => {
@@ -166,7 +209,7 @@ function Popup() {
     }
   }
 
-  async function analyzeLinkedInPage() {
+  async function analyzeLinkedInPage(action: ActionType = "analyze") {
     if (!currentUrl) {
       setResponse("No URL detected");
       return;
@@ -219,7 +262,7 @@ function Popup() {
         );
       }
 
-      setResponse("Sending to AI for analysis...");
+      setResponse(action === "email" ? "Drafting email with AI..." : "Sending to AI for analysis...");
 
       // Get auth token
       const { authToken } = await chrome.storage.local.get(['authToken']);
@@ -232,6 +275,9 @@ function Popup() {
         body: {
           profileData: extractResponse.data,
           linkedinUrl: currentUrl,
+          action: action,
+          userContext: userContext,
+          emailContext: action === "email" ? emailContext : undefined,
         },
         authToken,
       });
@@ -239,6 +285,8 @@ function Popup() {
       if (res.ok && res.data?.analysis) {
         setResponse(res.data.analysis);
         setProfileData(res.data.profileData || extractResponse.data);
+        setActionType(null);
+        setEmailContext("");
       } else if (res.error) {
         throw new Error(`API Error: ${res.error}`);
       } else {
@@ -788,6 +836,990 @@ function Popup() {
     );
   }
 
+  // Home Page Component
+  const renderHomePage = () => {
+    if (!isLinkedIn) {
+      return (
+        <div style={{
+          background: "white",
+          padding: "20px",
+          borderRadius: 12,
+          border: "2px solid #fbbf24",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 12
+          }}>
+            <div style={{ fontSize: 24 }}>⚠️</div>
+            <strong style={{
+              fontSize: 14,
+              color: "#92400e",
+              fontWeight: 700
+            }}>
+              Not a LinkedIn Page
+            </strong>
+          </div>
+          <p style={{
+            margin: 0,
+            fontSize: 13,
+            color: "#78350f",
+            lineHeight: 1.6
+          }}>
+            Please navigate to a LinkedIn profile page to analyze it with AI-powered insights.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* URL Display Card */}
+        <div style={{
+          background: "white",
+          padding: "16px",
+          borderRadius: 12,
+          marginBottom: 16,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8
+          }}>
+            <div style={{
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              background: "#0077b5",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "white"
+            }}>
+              in
+            </div>
+            <span style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#0f172a"
+            }}>
+              LinkedIn Profile Detected
+            </span>
+          </div>
+          <div style={{
+            fontSize: 11,
+            color: "#64748b",
+            wordBreak: "break-all",
+            lineHeight: 1.5,
+            paddingLeft: 32
+          }}>
+            {currentUrl}
+          </div>
+        </div>
+
+        {/* Action Selection */}
+        {!actionType && !response && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button
+              onClick={() => setActionType("analyze")}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "16px",
+                background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(14, 165, 233, 0.35)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.4)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 14px rgba(14, 165, 233, 0.35)";
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🔍</span>
+              <span>Analyze Profile</span>
+            </button>
+
+            <button
+              onClick={() => setActionType("email")}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "16px",
+                background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 20px rgba(139, 92, 246, 0.4)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.35)";
+              }}
+            >
+              <span style={{ fontSize: 20 }}>✉️</span>
+              <span>Draft Email</span>
+            </button>
+          </div>
+        )}
+
+        {/* Email Context Input */}
+        {actionType === "email" && !response && (
+          <div style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: 12,
+            marginTop: 16,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb"
+          }}>
+            <label style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#0f172a",
+              marginBottom: 8
+            }}>
+              Email Context (Optional)
+            </label>
+            <p style={{
+              fontSize: 11,
+              color: "#64748b",
+              marginBottom: 12,
+              lineHeight: 1.5
+            }}>
+              Add specific context about how you'd like to approach this email or anything specific you want to mention.
+            </p>
+            <textarea
+              value={emailContext}
+              onChange={(e) => setEmailContext(e.target.value)}
+              placeholder="E.g., I want to highlight our new product features, focus on solving their pain points around healthcare documentation..."
+              style={{
+                width: "100%",
+                minHeight: 100,
+                padding: "12px",
+                border: "1px solid #cbd5e1",
+                borderRadius: 8,
+                fontSize: 12,
+                fontFamily: "inherit",
+                resize: "vertical",
+                outline: "none"
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "#0ea5e9";
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "#cbd5e1";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button
+                onClick={() => analyzeLinkedInPage("email")}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: loading 
+                    ? "#94a3b8"
+                    : "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  boxShadow: loading ? "none" : "0 4px 14px rgba(139, 92, 246, 0.35)"
+                }}
+              >
+                {loading ? "Drafting..." : "Generate Email"}
+              </button>
+              <button
+                onClick={() => {
+                  setActionType(null);
+                  setEmailContext("");
+                }}
+                disabled={loading}
+                style={{
+                  padding: "12px 20px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Analyze Confirmation */}
+        {actionType === "analyze" && !response && (
+          <div style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: 12,
+            marginTop: 16,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb"
+          }}>
+            <p style={{
+              fontSize: 13,
+              color: "#475569",
+              marginBottom: 16,
+              lineHeight: 1.6
+            }}>
+              Ready to analyze this LinkedIn profile with AI insights?
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => analyzeLinkedInPage("analyze")}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: loading 
+                    ? "#94a3b8"
+                    : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  boxShadow: loading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{
+                      width: 16,
+                      height: 16,
+                      border: "2px solid rgba(255,255,255,0.3)",
+                      borderTop: "2px solid white",
+                      borderRadius: "50%",
+                      animation: "spin 0.8s linear infinite"
+                    }} />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Start Analysis"
+                )}
+              </button>
+              <button
+                onClick={() => setActionType(null)}
+                disabled={loading}
+                style={{
+                  padding: "12px 20px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Response Card */}
+        {response && (
+          <div style={{
+            marginTop: 16,
+            background: "white",
+            borderRadius: 12,
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+            overflow: "hidden",
+            border: "1px solid #e5e7eb",
+            animation: "slideIn 0.3s ease"
+          }}>
+            {/* Response Header */}
+            <div style={{
+              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+              padding: "12px 18px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8
+              }}>
+                <span style={{ fontSize: 16 }}>✨</span>
+                <strong style={{
+                  fontSize: 13,
+                  color: "white",
+                  fontWeight: 700,
+                  letterSpacing: "0.2px"
+                }}>
+                  AI Results
+                </strong>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={exportAsText}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    transition: "all 0.2s ease",
+                    fontWeight: 600
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                  title="Export as TXT"
+                >
+                  📄 TXT
+                </button>
+                <button
+                  onClick={exportAsPDF}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    transition: "all 0.2s ease",
+                    fontWeight: 600
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                  title="Export as PDF"
+                >
+                  📑 PDF
+                </button>
+                <button
+                  onClick={exportAsDOCX}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    transition: "all 0.2s ease",
+                    fontWeight: 600
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                  title="Export as DOCX"
+                >
+                  📝 DOCX
+                </button>
+                <button
+                  onClick={() => {
+                    setResponse("");
+                    setActionType(null);
+                  }}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    lineHeight: 1,
+                    transition: "all 0.2s ease",
+                    fontWeight: 700
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                  title="Clear"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Response Content */}
+            <div style={{
+              padding: "20px",
+              fontSize: 13,
+              lineHeight: "1.7",
+              color: "#0f172a",
+              maxHeight: 450,
+              overflow: "auto",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif"
+            }}>
+              {response.split('\n').map((line, i) => {
+                if (line.startsWith('**') && line.endsWith('**')) {
+                  return (
+                    <h3 key={i} style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#0ea5e9",
+                      marginTop: i === 0 ? 0 : 18,
+                      marginBottom: 10,
+                      letterSpacing: "0.2px"
+                    }}>
+                      {line.replace(/\*\*/g, '')}
+                    </h3>
+                  );
+                }
+                if (line.startsWith('• ') || line.startsWith('- ')) {
+                  return (
+                    <div key={i} style={{
+                      display: "flex",
+                      gap: 10,
+                      marginBottom: 8,
+                      paddingLeft: 4
+                    }}>
+                      <span style={{
+                        color: "#0ea5e9",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        lineHeight: 1.5
+                      }}>
+                        •
+                      </span>
+                      <span style={{
+                        flex: 1,
+                        color: "#334155",
+                        lineHeight: 1.6
+                      }}>
+                        {line.substring(2)}
+                      </span>
+                    </div>
+                  );
+                }
+                if (/^\d+\./.test(line)) {
+                  return (
+                    <div key={i} style={{
+                      marginBottom: 10,
+                      paddingLeft: 8
+                    }}>
+                      <span style={{
+                        color: "#334155",
+                        fontWeight: 600,
+                        lineHeight: 1.6
+                      }}>
+                        {line}
+                      </span>
+                    </div>
+                  );
+                }
+                if (line.trim() === '---') {
+                  return (
+                    <hr key={i} style={{
+                      border: "none",
+                      borderTop: "1px solid #e5e7eb",
+                      margin: "14px 0"
+                    }} />
+                  );
+                }
+                if (line.trim()) {
+                  return (
+                    <p key={i} style={{
+                      margin: "0 0 8px 0",
+                      color: "#475569",
+                      lineHeight: 1.6
+                    }}>
+                      {line}
+                    </p>
+                  );
+                }
+                return <br key={i} />;
+              })}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  // Context Page Component
+  const renderContextPage = () => {
+    const [tempContext, setTempContext] = useState(userContext);
+    const [saving, setSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState("");
+
+    const handleSave = async () => {
+      setSaving(true);
+      await saveUserContext(tempContext);
+      setSaveMessage("✓ Context saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+      setSaving(false);
+    };
+
+    return (
+      <div style={{
+        background: "white",
+        padding: "24px",
+        borderRadius: 12,
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+        border: "1px solid #e5e7eb"
+      }}>
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: "#0f172a",
+            margin: "0 0 8px 0"
+          }}>
+            Your Context
+          </h2>
+          <p style={{
+            fontSize: 12,
+            color: "#64748b",
+            margin: 0,
+            lineHeight: 1.5
+          }}>
+            This information will be used to personalize AI-generated analyses and emails.
+          </p>
+        </div>
+
+        {saveMessage && (
+          <div style={{
+            padding: "12px",
+            background: "#d1fae5",
+            color: "#065f46",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12,
+            border: "1px solid #6ee7b7"
+          }}>
+            {saveMessage}
+          </div>
+        )}
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{
+            display: "block",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#0f172a",
+            marginBottom: 8
+          }}>
+            About Me
+          </label>
+          <p style={{
+            fontSize: 11,
+            color: "#64748b",
+            marginBottom: 8,
+            lineHeight: 1.5
+          }}>
+            Describe your role, company, and what you do.
+          </p>
+          <textarea
+            value={tempContext.aboutMe}
+            onChange={(e) => setTempContext({ ...tempContext, aboutMe: e.target.value })}
+            placeholder="E.g., I'm a Sales Director at TechCorp, specializing in enterprise healthcare solutions..."
+            style={{
+              width: "100%",
+              minHeight: 100,
+              padding: "12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              fontSize: 12,
+              fontFamily: "inherit",
+              resize: "vertical",
+              outline: "none"
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#0ea5e9";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#cbd5e1";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{
+            display: "block",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#0f172a",
+            marginBottom: 8
+          }}>
+            My Objectives
+          </label>
+          <p style={{
+            fontSize: 11,
+            color: "#64748b",
+            marginBottom: 8,
+            lineHeight: 1.5
+          }}>
+            What are your sales goals and what you're looking to achieve?
+          </p>
+          <textarea
+            value={tempContext.objectives}
+            onChange={(e) => setTempContext({ ...tempContext, objectives: e.target.value })}
+            placeholder="E.g., Looking to connect with healthcare decision-makers, build relationships with CMOs and CTOs, increase product adoption..."
+            style={{
+              width: "100%",
+              minHeight: 100,
+              padding: "12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              fontSize: 12,
+              fontFamily: "inherit",
+              resize: "vertical",
+              outline: "none"
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#0ea5e9";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#cbd5e1";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: saving 
+              ? "#94a3b8"
+              : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+            color: "white",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: saving ? "not-allowed" : "pointer",
+            boxShadow: saving ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
+            transition: "all 0.2s ease"
+          }}
+        >
+          {saving ? "Saving..." : "Save Context"}
+        </button>
+      </div>
+    );
+  };
+
+  // Integrations Page Component
+  const renderIntegrationsPage = () => {
+    return (
+      <div>
+        <div style={{
+          background: "white",
+          padding: "24px",
+          borderRadius: 12,
+          marginBottom: 16,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb"
+        }}>
+          <h2 style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: "#0f172a",
+            margin: "0 0 8px 0"
+          }}>
+            Integrations
+          </h2>
+          <p style={{
+            fontSize: 12,
+            color: "#64748b",
+            margin: 0,
+            lineHeight: 1.5
+          }}>
+            Connect your tools to streamline your workflow.
+          </p>
+        </div>
+
+        {/* Email Integration */}
+        <div style={{
+          background: "white",
+          padding: "20px",
+          borderRadius: 12,
+          marginBottom: 12,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20
+              }}>
+                📧
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: "0 0 2px 0"
+                }}>
+                  Email Integration
+                </h3>
+                <p style={{
+                  fontSize: 11,
+                  color: "#64748b",
+                  margin: 0
+                }}>
+                  Gmail, Outlook, and more
+                </p>
+              </div>
+            </div>
+            <span style={{
+              fontSize: 11,
+              padding: "4px 10px",
+              background: "#fef3c7",
+              color: "#92400e",
+              borderRadius: 6,
+              fontWeight: 600
+            }}>
+              Coming Soon
+            </span>
+          </div>
+          <p style={{
+            fontSize: 12,
+            color: "#64748b",
+            marginBottom: 12,
+            lineHeight: 1.5
+          }}>
+            Send drafted emails directly from the extension to your email client.
+          </p>
+          <button
+            disabled
+            style={{
+              width: "100%",
+              padding: "10px",
+              background: "#f1f5f9",
+              color: "#94a3b8",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "not-allowed"
+            }}
+          >
+            Connect Email
+          </button>
+        </div>
+
+        {/* CRM Integration */}
+        <div style={{
+          background: "white",
+          padding: "20px",
+          borderRadius: 12,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20
+              }}>
+                🔗
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: "0 0 2px 0"
+                }}>
+                  CRM Integration
+                </h3>
+                <p style={{
+                  fontSize: 11,
+                  color: "#64748b",
+                  margin: 0
+                }}>
+                  Salesforce, HubSpot, and more
+                </p>
+              </div>
+            </div>
+            <span style={{
+              fontSize: 11,
+              padding: "4px 10px",
+              background: "#fef3c7",
+              color: "#92400e",
+              borderRadius: 6,
+              fontWeight: 600
+            }}>
+              Coming Soon
+            </span>
+          </div>
+          <p style={{
+            fontSize: 12,
+            color: "#64748b",
+            marginBottom: 12,
+            lineHeight: 1.5
+          }}>
+            Automatically sync analyzed profiles and activities to your CRM.
+          </p>
+          <button
+            disabled
+            style={{
+              width: "100%",
+              padding: "10px",
+              background: "#f1f5f9",
+              color: "#94a3b8",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "not-allowed"
+            }}
+          >
+            Connect CRM
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Navigation Component
+  const renderNavigation = () => (
+    <div style={{
+      background: "white",
+      borderBottom: "1px solid #e5e7eb",
+      display: "flex",
+      justifyContent: "space-around",
+      padding: "0",
+    }}>
+      {[
+        { id: "home" as Page, icon: "🏠", label: "Home" },
+        { id: "context" as Page, icon: "👤", label: "Context" },
+        { id: "integrations" as Page, icon: "🔌", label: "Integrations" },
+      ].map((page) => (
+        <button
+          key={page.id}
+          onClick={() => {
+            setCurrentPage(page.id);
+            setActionType(null);
+            setResponse("");
+          }}
+          style={{
+            flex: 1,
+            padding: "12px 8px",
+            background: currentPage === page.id ? "#f0f9ff" : "transparent",
+            border: "none",
+            borderBottom: currentPage === page.id ? "2px solid #0ea5e9" : "2px solid transparent",
+            cursor: "pointer",
+            fontSize: 11,
+            fontWeight: 600,
+            color: currentPage === page.id ? "#0ea5e9" : "#64748b",
+            transition: "all 0.2s ease",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+          }}
+          onMouseOver={(e) => {
+            if (currentPage !== page.id) {
+              e.currentTarget.style.background = "#f8fafc";
+              e.currentTarget.style.color = "#475569";
+            }
+          }}
+          onMouseOut={(e) => {
+            if (currentPage !== page.id) {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#64748b";
+            }
+          }}
+        >
+          <span style={{ fontSize: 18 }}>{page.icon}</span>
+          <span>{page.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div style={{
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'SF Pro Display', system-ui, sans-serif",
@@ -864,377 +1896,14 @@ function Popup() {
         </div>
       </div>
 
-      {/* Content Area */}
+      {/* Navigation Menu */}
+      {renderNavigation()}
+
+      {/* Content Area - Render based on current page */}
       <div style={{ padding: "24px" }}>
-        {isLinkedIn ? (
-          <>
-            {/* URL Display Card */}
-            <div style={{
-              background: "white",
-              padding: "16px",
-              borderRadius: 12,
-              marginBottom: 16,
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 8
-              }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  background: "#0077b5",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "white"
-                }}>
-                  in
-                </div>
-                <span style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#0f172a"
-                }}>
-                  LinkedIn Profile Detected
-                </span>
-              </div>
-              <div style={{
-                fontSize: 11,
-                color: "#64748b",
-                wordBreak: "break-all",
-                lineHeight: 1.5,
-                paddingLeft: 32
-              }}>
-                {currentUrl}
-              </div>
-            </div>
-
-            {/* Analyze Button */}
-            <button
-              onClick={analyzeLinkedInPage}
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "14px",
-                background: loading 
-                  ? "#94a3b8"
-                  : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: loading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
-                transition: "all 0.2s ease",
-                letterSpacing: "0.2px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8
-              }}
-              onMouseOver={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.4)";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(14, 165, 233, 0.35)";
-                }
-              }}
-            >
-              {loading ? (
-                <>
-                  <div style={{
-                    width: 16,
-                    height: 16,
-                    border: "2px solid rgba(255,255,255,0.3)",
-                    borderTop: "2px solid white",
-                    borderRadius: "50%",
-                    animation: "spin 0.8s linear infinite"
-                  }} />
-                  Analyzing Profile...
-                </>
-              ) : (
-                <>
-                  <span>🔍</span>
-                  Analyze This Profile
-                </>
-              )}
-            </button>
-          </>
-        ) : (
-          <div style={{
-            background: "white",
-            padding: "20px",
-            borderRadius: 12,
-            border: "2px solid #fbbf24",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)"
-          }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 12
-            }}>
-              <div style={{ fontSize: 24 }}>⚠️</div>
-              <strong style={{
-                fontSize: 14,
-                color: "#92400e",
-                fontWeight: 700
-              }}>
-                Not a LinkedIn Page
-              </strong>
-            </div>
-            <p style={{
-              margin: 0,
-              fontSize: 13,
-              color: "#78350f",
-              lineHeight: 1.6
-            }}>
-              Please navigate to a LinkedIn profile page to analyze it with AI-powered insights.
-            </p>
-          </div>
-        )}
-
-        {/* Response Card */}
-        {response && (
-          <div style={{
-            marginTop: 16,
-            background: "white",
-            borderRadius: 12,
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-            overflow: "hidden",
-            border: "1px solid #e5e7eb",
-            animation: "slideIn 0.3s ease"
-          }}>
-            {/* Response Header */}
-            <div style={{
-              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
-              padding: "12px 18px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8
-              }}>
-                <span style={{ fontSize: 16 }}>✨</span>
-                <strong style={{
-                  fontSize: 13,
-                  color: "white",
-                  fontWeight: 700,
-                  letterSpacing: "0.2px"
-                }}>
-                  AI Analysis Results
-                </strong>
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  onClick={exportAsText}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.2)",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    transition: "all 0.2s ease",
-                    fontWeight: 600
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  }}
-                  title="Export as TXT"
-                >
-                  📄 TXT
-                </button>
-                <button
-                  onClick={exportAsPDF}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.2)",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    transition: "all 0.2s ease",
-                    fontWeight: 600
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  }}
-                  title="Export as PDF"
-                >
-                  📑 PDF
-                </button>
-                <button
-                  onClick={exportAsDOCX}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.2)",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    transition: "all 0.2s ease",
-                    fontWeight: 600
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  }}
-                  title="Export as DOCX"
-                >
-                  📝 DOCX
-                </button>
-                <button
-                  onClick={() => setResponse("")}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.2)",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: 16,
-                    padding: "4px 8px",
-                    borderRadius: 6,
-                    lineHeight: 1,
-                    transition: "all 0.2s ease",
-                    fontWeight: 700
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  }}
-                  title="Clear"
-                >
-                  ×
-        </button>
-              </div>
-            </div>
-
-            {/* Response Content with Enhanced Typography */}
-            <div style={{
-              padding: "20px",
-              fontSize: 13,
-              lineHeight: "1.7",
-              color: "#0f172a",
-              maxHeight: 450,
-              overflow: "auto",
-              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif"
-            }}>
-              {response.split('\n').map((line, i) => {
-                // Headers (bold text with **)
-                if (line.startsWith('**') && line.endsWith('**')) {
-                  return (
-                    <h3 key={i} style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#0ea5e9",
-                      marginTop: i === 0 ? 0 : 18,
-                      marginBottom: 10,
-                      letterSpacing: "0.2px"
-                    }}>
-                      {line.replace(/\*\*/g, '')}
-                    </h3>
-                  );
-                }
-                // Bullet points
-                if (line.startsWith('• ') || line.startsWith('- ')) {
-                  return (
-                    <div key={i} style={{
-                      display: "flex",
-                      gap: 10,
-                      marginBottom: 8,
-                      paddingLeft: 4
-                    }}>
-                      <span style={{
-                        color: "#0ea5e9",
-                        fontWeight: 700,
-                        fontSize: 14,
-                        lineHeight: 1.5
-                      }}>
-                        •
-                      </span>
-                      <span style={{
-                        flex: 1,
-                        color: "#334155",
-                        lineHeight: 1.6
-                      }}>
-                        {line.substring(2)}
-                      </span>
-                    </div>
-                  );
-                }
-                // Numbered lists
-                if (/^\d+\./.test(line)) {
-                  return (
-                    <div key={i} style={{
-                      marginBottom: 10,
-                      paddingLeft: 8
-                    }}>
-                      <span style={{
-                        color: "#334155",
-                        fontWeight: 600,
-                        lineHeight: 1.6
-                      }}>
-                        {line}
-                      </span>
-                    </div>
-                  );
-                }
-                // Divider (---)
-                if (line.trim() === '---') {
-                  return (
-                    <hr key={i} style={{
-                      border: "none",
-                      borderTop: "1px solid #e5e7eb",
-                      margin: "14px 0"
-                    }} />
-                  );
-                }
-                // Regular text
-                if (line.trim()) {
-                  return (
-                    <p key={i} style={{
-                      margin: "0 0 8px 0",
-                      color: "#475569",
-                      lineHeight: 1.6
-                    }}>
-                      {line}
-                    </p>
-                  );
-                }
-                return <br key={i} />;
-              })}
-            </div>
-          </div>
-        )}
+        {currentPage === "home" && renderHomePage()}
+        {currentPage === "context" && renderContextPage()}
+        {currentPage === "integrations" && renderIntegrationsPage()}
       </div>
 
       {/* Add keyframe animations */}
