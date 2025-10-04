@@ -461,10 +461,15 @@ function Popup() {
     return (
       <div style={{
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif",
-        width: 380,
+        width: 420,
+        minHeight: 500,
+        maxHeight: 600,
         background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
         padding: 0,
-        margin: 0
+        margin: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden"
       }}>
         {/* Auth Header */}
         <div style={{
@@ -506,7 +511,12 @@ function Popup() {
         </div>
 
         {/* Auth Form */}
-        <div style={{ padding: "24px" }}>
+        <div style={{ 
+          padding: "24px",
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden"
+        }}>
           {authError && (
             <div style={{
               padding: "12px",
@@ -550,10 +560,10 @@ function Popup() {
               <div style={{ marginBottom: 20 }}>
                 <label style={{
                   display: "block",
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 600,
-                  marginBottom: 6,
-                  color: "#334155"
+                  marginBottom: 8,
+                  color: "#0f172a"
                 }}>
                   Email
                 </label>
@@ -565,19 +575,21 @@ function Popup() {
                   placeholder="you@example.com"
                   style={{
                     width: "100%",
-                    padding: "10px 12px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 8,
-                    fontSize: 13,
+                    padding: "12px 14px",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: 10,
+                    fontSize: 14,
                     outline: "none",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    boxSizing: "border-box",
+                    background: "white"
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = "#0ea5e9";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                    e.currentTarget.style.boxShadow = "0 0 0 4px rgba(14, 165, 233, 0.1)";
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 />
@@ -588,18 +600,31 @@ function Popup() {
                 disabled={authLoading}
                 style={{
                   width: "100%",
-                  padding: "12px",
+                  padding: "14px",
                   background: authLoading 
                     ? "#94a3b8" 
                     : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
                   color: "white",
                   border: "none",
-                  borderRadius: 10,
-                  fontSize: 14,
+                  borderRadius: 12,
+                  fontSize: 15,
                   fontWeight: 700,
                   cursor: authLoading ? "not-allowed" : "pointer",
-                  boxShadow: authLoading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
-                  transition: "all 0.2s ease"
+                  boxShadow: authLoading ? "none" : "0 4px 16px rgba(14, 165, 233, 0.4)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  letterSpacing: "0.3px"
+                }}
+                onMouseOver={(e) => {
+                  if (!authLoading) {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.5)";
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!authLoading) {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(14, 165, 233, 0.4)";
+                  }
                 }}
               >
                 {authLoading ? "Sending..." : "Send Reset Link"}
@@ -639,13 +664,13 @@ function Popup() {
             <>
             <form onSubmit={showLogin ? handleLogin : handleSignup}>
             {!showLogin && (
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 16 }}>
                 <label style={{
                   display: "block",
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 600,
-                  marginBottom: 6,
-                  color: "#334155"
+                  marginBottom: 8,
+                  color: "#0f172a"
                 }}>
                   Full Name
                 </label>
@@ -657,32 +682,34 @@ function Popup() {
                   placeholder="John Doe"
                   style={{
                     width: "100%",
-                    padding: "10px 12px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: 8,
-                    fontSize: 13,
+                    padding: "12px 14px",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: 10,
+                    fontSize: 14,
                     outline: "none",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    boxSizing: "border-box",
+                    background: "white"
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = "#0ea5e9";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                    e.currentTarget.style.boxShadow = "0 0 0 4px rgba(14, 165, 233, 0.1)";
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>
             )}
 
-            <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 16 }}>
               <label style={{
                 display: "block",
-                fontSize: 12,
+                  fontSize: 13,
                 fontWeight: 600,
-                marginBottom: 6,
-                color: "#334155"
+                  marginBottom: 8,
+                  color: "#0f172a"
               }}>
                 Email
               </label>
@@ -694,19 +721,21 @@ function Popup() {
                 placeholder="you@example.com"
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: 8,
-                  fontSize: 13,
+                    padding: "12px 14px",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: 10,
+                    fontSize: 14,
                   outline: "none",
-                  transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    boxSizing: "border-box",
+                    background: "white"
                 }}
                 onFocus={(e) => {
                   e.currentTarget.style.borderColor = "#0ea5e9";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                    e.currentTarget.style.boxShadow = "0 0 0 4px rgba(14, 165, 233, 0.1)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
@@ -715,10 +744,10 @@ function Popup() {
             <div style={{ marginBottom: 20 }}>
               <label style={{
                 display: "block",
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
-                marginBottom: 6,
-                color: "#334155"
+                marginBottom: 8,
+                color: "#0f172a"
               }}>
                 Password
               </label>
@@ -731,24 +760,26 @@ function Popup() {
                 minLength={6}
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: 8,
-                  fontSize: 13,
+                  padding: "12px 14px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: 10,
+                  fontSize: 14,
                   outline: "none",
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
+                  boxSizing: "border-box",
+                  background: "white"
                 }}
                 onFocus={(e) => {
                   e.currentTarget.style.borderColor = "#0ea5e9";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                  e.currentTarget.style.boxShadow = "0 0 0 4px rgba(14, 165, 233, 0.1)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#cbd5e1";
+                  e.currentTarget.style.borderColor = "#e2e8f0";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
               {!showLogin && (
-                <p style={{ fontSize: 11, color: "#64748b", margin: "4px 0 0 0" }}>
+                <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 0 0" }}>
                   At least 6 characters
                 </p>
               )}
@@ -759,18 +790,31 @@ function Popup() {
               disabled={authLoading}
               style={{
                 width: "100%",
-                padding: "12px",
+                padding: "14px",
                 background: authLoading 
                   ? "#94a3b8" 
                   : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
                 color: "white",
                 border: "none",
-                borderRadius: 10,
-                fontSize: 14,
+                borderRadius: 12,
+                fontSize: 15,
                 fontWeight: 700,
                 cursor: authLoading ? "not-allowed" : "pointer",
-                boxShadow: authLoading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
-                transition: "all 0.2s ease"
+                boxShadow: authLoading ? "none" : "0 4px 16px rgba(14, 165, 233, 0.4)",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                letterSpacing: "0.3px"
+              }}
+              onMouseOver={(e) => {
+                if (!authLoading) {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.5)";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!authLoading) {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(14, 165, 233, 0.4)";
+                }
               }}
             >
               {authLoading ? "Please wait..." : (showLogin ? "Sign In" : "Create Account")}
