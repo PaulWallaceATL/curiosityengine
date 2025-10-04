@@ -14,26 +14,44 @@ export default function Navigation() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check initial auth state
     checkUser();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await checkUser();
+      } else {
+        setUserData(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function checkUser() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (user) {
+      if (session?.user) {
         const { data } = await supabase
           .from('users')
           .select('role, organization_id')
-          .eq('id', user.id)
+          .eq('id', session.user.id)
           .single();
         
         if (data) {
           setUserData(data as UserData);
         }
+      } else {
+        setUserData(null);
       }
     } catch (error) {
       console.error('Error checking user:', error);
+      setUserData(null);
     } finally {
       setLoading(false);
     }
@@ -41,7 +59,8 @@ export default function Navigation() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    setUserData(null);
+    window.location.href = '/';
   }
 
   const showOrgAdmin = userData?.role === 'org_admin' || userData?.role === 'super_admin';
