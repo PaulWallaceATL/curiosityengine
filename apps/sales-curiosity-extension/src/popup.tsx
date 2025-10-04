@@ -1366,33 +1366,112 @@ function Popup() {
               fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif"
             }}>
               {response.split('\n').map((line, i) => {
-                if (line.startsWith('**') && line.endsWith('**')) {
+                // Clean line: remove ###, **, and other markdown
+                let cleanLine = line.trim();
+                
+                // Handle headers: ### Title or **Title**
+                if (cleanLine.startsWith('###') || cleanLine.startsWith('##') || cleanLine.startsWith('#')) {
+                  cleanLine = cleanLine.replace(/^#{1,6}\s*/, '');
                   return (
                     <h3 key={i} style={{
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 700,
                       color: "#0ea5e9",
-                      marginTop: i === 0 ? 0 : 18,
-                      marginBottom: 10,
-                      letterSpacing: "0.2px"
+                      marginTop: i === 0 ? 0 : 20,
+                      marginBottom: 12,
+                      letterSpacing: "0.3px",
+                      borderBottom: "2px solid #e0f2fe",
+                      paddingBottom: 8
                     }}>
-                      {line.replace(/\*\*/g, '')}
+                      {cleanLine.replace(/\*\*/g, '')}
                     </h3>
                   );
                 }
-                if (line.startsWith('• ') || line.startsWith('- ')) {
+                
+                // Handle **Subject:** and **Email:** patterns
+                if (cleanLine.startsWith('**') && cleanLine.includes(':**')) {
+                  const text = cleanLine.replace(/\*\*/g, '');
+                  return (
+                    <h4 key={i} style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      marginTop: 16,
+                      marginBottom: 10,
+                      letterSpacing: "0.2px"
+                    }}>
+                      {text}
+                    </h4>
+                  );
+                }
+                
+                // Handle numbered items with bold: 1. **Title**: Content
+                if (/^\d+\.\s*\*\*/.test(cleanLine)) {
+                  const match = cleanLine.match(/^(\d+)\.\s*\*\*([^*]+)\*\*:?\s*(.*)/);
+                  if (match) {
+                    const [, num, title, content] = match;
+                  return (
+                    <div key={i} style={{
+                        marginBottom: 14,
+                        paddingLeft: 12,
+                        borderLeft: "3px solid #0ea5e9",
+                        paddingTop: 8,
+                        paddingBottom: 8,
+                        background: "#f8fafc"
+                      }}>
+                        <div style={{
+                        fontWeight: 700,
+                          color: "#0ea5e9",
+                          marginBottom: content ? 6 : 0,
+                          fontSize: 14
+                        }}>
+                          {num}. {title}
+                        </div>
+                        {content && (
+                          <div style={{
+                            color: "#475569",
+                            lineHeight: 1.6,
+                            paddingLeft: 8
+                          }}>
+                            {content}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                }
+                
+                // Handle regular numbered items: 1. Text
+                if (/^\d+\.\s+/.test(cleanLine) && !cleanLine.includes('**')) {
+                  return (
+                    <div key={i} style={{
+                      marginBottom: 10,
+                      paddingLeft: 12,
+                        color: "#334155",
+                      fontWeight: 500,
+                        lineHeight: 1.6
+                      }}>
+                      {cleanLine.replace(/\*\*/g, '')}
+                    </div>
+                  );
+                }
+                
+                // Handle bullet points: • or -
+                if (cleanLine.startsWith('• ') || cleanLine.startsWith('- ')) {
+                  const text = cleanLine.substring(2).replace(/\*\*/g, '');
                   return (
                     <div key={i} style={{
                       display: "flex",
-                      gap: 10,
-                      marginBottom: 8,
-                      paddingLeft: 4
+                      gap: 12,
+                      marginBottom: 10,
+                      paddingLeft: 8
                     }}>
                       <span style={{
                         color: "#0ea5e9",
                         fontWeight: 700,
-                        fontSize: 14,
-                        lineHeight: 1.5
+                        fontSize: 16,
+                        lineHeight: 1.5,
+                        minWidth: 16
                       }}>
                         •
                       </span>
@@ -1401,47 +1480,62 @@ function Popup() {
                         color: "#334155",
                         lineHeight: 1.6
                       }}>
-                        {line.substring(2)}
+                        {text}
                       </span>
                     </div>
                   );
                 }
-                if (/^\d+\./.test(line)) {
-                  return (
-                    <div key={i} style={{
-                      marginBottom: 10,
-                      paddingLeft: 8
-                    }}>
-                      <span style={{
-                        color: "#334155",
-                        fontWeight: 600,
-                        lineHeight: 1.6
-                      }}>
-                        {line}
-                      </span>
-                    </div>
-                  );
-                }
-                if (line.trim() === '---') {
+                
+                // Handle dividers
+                if (cleanLine === '---' || cleanLine === '___') {
                   return (
                     <hr key={i} style={{
                       border: "none",
-                      borderTop: "1px solid #e5e7eb",
-                      margin: "14px 0"
+                      borderTop: "2px solid #e5e7eb",
+                      margin: "20px 0"
                     }} />
                   );
                 }
-                if (line.trim()) {
+                
+                // Handle regular text with inline bold
+                if (cleanLine && cleanLine.includes('**')) {
+                  const parts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
                   return (
                     <p key={i} style={{
-                      margin: "0 0 8px 0",
+                      margin: "0 0 10px 0",
                       color: "#475569",
-                      lineHeight: 1.6
+                      lineHeight: 1.7
                     }}>
-                      {line}
+                      {parts.map((part, idx) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                          return (
+                            <strong key={idx} style={{ 
+                              color: "#0f172a",
+                              fontWeight: 600 
+                            }}>
+                              {part.slice(2, -2)}
+                            </strong>
+                          );
+                        }
+                        return part;
+                      })}
                     </p>
                   );
                 }
+                
+                // Handle regular text
+                if (cleanLine) {
+                  return (
+                    <p key={i} style={{
+                      margin: "0 0 10px 0",
+                      color: "#475569",
+                      lineHeight: 1.7
+                    }}>
+                      {cleanLine}
+                    </p>
+                  );
+                }
+                
                 return <br key={i} />;
               })}
             </div>
