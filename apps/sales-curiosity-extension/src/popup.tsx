@@ -12,12 +12,38 @@ function Popup() {
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [profileData, setProfileData] = useState<any>(null);
+  
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [showLogin, setShowLogin] = useState<boolean>(true); // true = login, false = signup
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>("");
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     try {
       localStorage.setItem("apiBase", apiBase);
     } catch {}
   }, [apiBase]);
+
+  // Check if user is authenticated on mount
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const result = await chrome.storage.local.get(['authToken', 'user']);
+        if (result.authToken && result.user) {
+          setIsAuthenticated(true);
+          setUser(result.user);
+        }
+      } catch (e) {
+        console.error("Error checking auth:", e);
+      }
+    }
+    checkAuth();
+  }, []);
 
   // Get current tab URL on mount
   useEffect(() => {
@@ -35,6 +61,76 @@ function Popup() {
     }
     getCurrentTab();
   }, []);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+    const res = await chrome.runtime.sendMessage({
+      type: "PING_API",
+        url: `${apiBase}/api/auth/login`,
+        method: "POST",
+        body: { email, password },
+      });
+
+      if (res.ok && res.data?.user && res.data?.session) {
+        await chrome.storage.local.set({
+          authToken: res.data.session.access_token,
+          user: res.data.user,
+        });
+        setIsAuthenticated(true);
+        setUser(res.data.user);
+        setEmail("");
+        setPassword("");
+      } else {
+        setAuthError(res.data?.error || "Login failed");
+      }
+    } catch (err) {
+      setAuthError("Connection error. Check your backend is running.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+    const res = await chrome.runtime.sendMessage({
+      type: "PING_API",
+        url: `${apiBase}/api/auth/signup`,
+        method: "POST",
+        body: { email, password, fullName },
+      });
+
+      if (res.ok && res.data?.user) {
+        setAuthError("");
+        setShowLogin(true);
+        setEmail("");
+        setPassword("");
+        setFullName("");
+        // Show success message
+        alert("Account created! Please login.");
+      } else {
+        setAuthError(res.data?.error || "Signup failed");
+      }
+    } catch (err) {
+      setAuthError("Connection error. Check your backend is running.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    await chrome.storage.local.remove(['authToken', 'user']);
+    setIsAuthenticated(false);
+    setUser(null);
+    setResponse("");
+  }
 
   async function analyzeLinkedInPage() {
     if (!currentUrl) {
@@ -91,6 +187,9 @@ function Popup() {
 
       setResponse("Sending to AI for analysis...");
 
+      // Get auth token
+      const { authToken } = await chrome.storage.local.get(['authToken']);
+
       // Send the extracted data to your API for AI analysis
       const res = await chrome.runtime.sendMessage({
         type: "PING_API",
@@ -100,6 +199,7 @@ function Popup() {
           profileData: extractResponse.data,
           linkedinUrl: currentUrl,
         },
+        authToken,
       });
 
       if (res.ok && res.data?.analysis) {
@@ -287,6 +387,245 @@ ${response.split('\n').map(line => {
     URL.revokeObjectURL(url);
   }
 
+  // Show auth screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif",
+        width: 380,
+        background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+        padding: 0,
+        margin: 0
+      }}>
+        {/* Auth Header */}
+        <div style={{
+          background: "white",
+          padding: "24px",
+          borderBottom: "1px solid #e5e7eb"
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              marginBottom: 12,
+              boxShadow: "0 6px 16px rgba(14, 165, 233, 0.3)"
+            }}>
+              🤖
+            </div>
+            <h1 style={{
+              fontSize: 22,
+              fontWeight: 700,
+              margin: "0 0 6px 0",
+              color: "#0f172a"
+            }}>
+              Sales Curiosity
+            </h1>
+            <p style={{
+              fontSize: 13,
+              color: "#64748b",
+              margin: 0
+            }}>
+              AI-Powered LinkedIn Intelligence
+            </p>
+          </div>
+        </div>
+
+        {/* Auth Form */}
+        <div style={{ padding: "24px" }}>
+          {authError && (
+            <div style={{
+              padding: "12px",
+              background: "#fee2e2",
+              color: "#991b1b",
+              borderRadius: 8,
+              marginBottom: 16,
+              fontSize: 12,
+              border: "1px solid #fecaca"
+            }}>
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={showLogin ? handleLogin : handleSignup}>
+            {!showLogin && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  color: "#334155"
+                }}>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  placeholder="John Doe"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    outline: "none",
+                    transition: "all 0.2s ease"
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#0ea5e9";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 600,
+                marginBottom: 6,
+                color: "#334155"
+              }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  outline: "none",
+                  transition: "all 0.2s ease"
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#0ea5e9";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 600,
+                marginBottom: 6,
+                color: "#334155"
+              }}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                minLength={6}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  outline: "none",
+                  transition: "all 0.2s ease"
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#0ea5e9";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+              {!showLogin && (
+                <p style={{ fontSize: 11, color: "#64748b", margin: "4px 0 0 0" }}>
+                  At least 6 characters
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: authLoading 
+                  ? "#94a3b8" 
+                  : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: authLoading ? "not-allowed" : "pointer",
+                boxShadow: authLoading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {authLoading ? "Please wait..." : (showLogin ? "Sign In" : "Create Account")}
+            </button>
+          </form>
+
+          <div style={{
+            marginTop: 16,
+            textAlign: "center",
+            fontSize: 12,
+            color: "#64748b"
+          }}>
+            {showLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+            <button
+              onClick={() => {
+                setShowLogin(!showLogin);
+                setAuthError("");
+                setEmail("");
+                setPassword("");
+                setFullName("");
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#0ea5e9",
+                fontWeight: 600,
+                cursor: "pointer",
+                textDecoration: "none",
+                fontSize: 12,
+                padding: 0
+              }}
+            >
+              {showLogin ? "Sign up" : "Sign in"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'SF Pro Display', system-ui, sans-serif",
@@ -303,39 +642,63 @@ ${response.split('\n').map(line => {
         borderBottom: "1px solid #e5e7eb",
         boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 20,
-            boxShadow: "0 4px 12px rgba(14, 165, 233, 0.3)"
-          }}>
-            🤖
-          </div>
-          <div>
-            <h1 style={{
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               fontSize: 20,
-              fontWeight: 700,
-              margin: 0,
-              color: "#0f172a",
-              letterSpacing: "-0.3px"
+              boxShadow: "0 4px 12px rgba(14, 165, 233, 0.3)"
             }}>
-              Sales Curiosity
-            </h1>
-            <p style={{
-              fontSize: 11,
-              color: "#64748b",
-              margin: 0,
-              fontWeight: 500
-            }}>
-              AI-Powered LinkedIn Intelligence
-            </p>
+              🤖
+            </div>
+            <div>
+              <h1 style={{
+                fontSize: 20,
+                fontWeight: 700,
+                margin: 0,
+                color: "#0f172a",
+                letterSpacing: "-0.3px"
+              }}>
+                Sales Curiosity
+              </h1>
+              <p style={{
+                fontSize: 10,
+                color: "#64748b",
+                margin: 0,
+                fontWeight: 500
+              }}>
+                {user?.email || "Logged in"}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "6px 12px",
+              background: "#f1f5f9",
+              border: "none",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#475569",
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#e2e8f0";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#f1f5f9";
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
 
@@ -586,7 +949,7 @@ ${response.split('\n').map(line => {
                   title="Clear"
                 >
                   ×
-                </button>
+        </button>
               </div>
             </div>
 

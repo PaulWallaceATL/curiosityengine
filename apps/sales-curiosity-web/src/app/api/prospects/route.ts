@@ -181,30 +181,39 @@ ${profileData.name || 'This professional'} is ${profileData.headline || 'a profe
 
     // Save analysis to database (if user is authenticated)
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        console.log('Saving analysis to database for user:', user.id);
-        
-        const { error: insertError } = await supabase
-          .from('linkedin_analyses')
-          .insert({
-            user_id: user.id,
-            linkedin_url: linkedinUrl,
-            profile_name: profileData.name,
-            profile_headline: profileData.headline,
-            profile_location: profileData.location,
-            profile_data: profileData,
-            ai_analysis: analysis,
-          });
+      const authHeader = req.headers.get('authorization');
+      let userId = null;
 
-        if (insertError) {
-          console.error('Error saving analysis:', insertError);
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        
+        if (!error && user) {
+          userId = user.id;
+          console.log('Saving analysis to database for user:', userId);
+          
+          const { error: insertError } = await supabase
+            .from('linkedin_analyses')
+            .insert({
+              user_id: userId,
+              linkedin_url: linkedinUrl,
+              profile_name: profileData.name,
+              profile_headline: profileData.headline,
+              profile_location: profileData.location,
+              profile_data: profileData,
+              ai_analysis: analysis,
+            });
+
+          if (insertError) {
+            console.error('Error saving analysis:', insertError);
+          } else {
+            console.log('Analysis saved successfully');
+          }
         } else {
-          console.log('Analysis saved successfully');
+          console.log('Invalid auth token');
         }
       } else {
-        console.log('No authenticated user, skipping database save');
+        console.log('No auth token provided, skipping database save');
       }
     } catch (dbError) {
       console.error('Database save error:', dbError);
