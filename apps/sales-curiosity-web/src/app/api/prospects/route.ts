@@ -260,10 +260,11 @@ ${profileData.name || 'This professional'} is ${profileData.headline || 'a profe
       console.log('Analysis complete, length:', analysis.length);
     }
 
-    // Save analysis to database (if user is authenticated)
+    // Save to database (if user is authenticated)
     try {
       const authHeader = req.headers.get('authorization');
       let userId = null;
+      let organizationId = null;
 
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
@@ -271,24 +272,72 @@ ${profileData.name || 'This professional'} is ${profileData.headline || 'a profe
         
         if (!error && user) {
           userId = user.id;
-          console.log('Saving analysis to database for user:', userId);
           
-          const { error: insertError } = await supabase
-            .from('linkedin_analyses')
-            .insert({
-              user_id: userId,
-              linkedin_url: linkedinUrl,
-              profile_name: profileData.name,
-              profile_headline: profileData.headline,
-              profile_location: profileData.location,
-              profile_data: profileData,
-              ai_analysis: analysis,
-            });
+          // Get user's organization_id
+          const { data: userData } = await supabase
+            .from('users')
+            .select('organization_id')
+            .eq('id', userId)
+            .single();
+          
+          organizationId = userData?.organization_id;
 
-          if (insertError) {
-            console.error('Error saving analysis:', insertError);
+          if (action === 'email') {
+            // Save email generation
+            console.log('Saving email generation to database for user:', userId);
+            
+            // Parse the email from analysis (format: Subject: ...\n\nBody: ...)
+            let subject = '';
+            let body = analysis;
+            
+            const subjectMatch = analysis.match(/Subject:\s*(.+?)(?:\n|$)/i);
+            if (subjectMatch) {
+              subject = subjectMatch[1].trim();
+              // Remove subject line from body
+              body = analysis.replace(/Subject:\s*.+?(?:\n|$)/i, '').trim();
+              // Remove "Body:" prefix if present
+              body = body.replace(/^Body:\s*/i, '').trim();
+            }
+            
+            const { error: insertError } = await supabase
+              .from('email_generations')
+              .insert({
+                user_id: userId,
+                organization_id: organizationId,
+                linkedin_url: linkedinUrl,
+                profile_name: profileData.name,
+                subject: subject,
+                body: body,
+                email_context: emailContext || null,
+              });
+
+            if (insertError) {
+              console.error('Error saving email generation:', insertError);
+            } else {
+              console.log('Email generation saved successfully');
+            }
           } else {
-            console.log('Analysis saved successfully');
+            // Save profile analysis
+            console.log('Saving analysis to database for user:', userId);
+            
+            const { error: insertError } = await supabase
+              .from('linkedin_analyses')
+              .insert({
+                user_id: userId,
+                organization_id: organizationId,
+                linkedin_url: linkedinUrl,
+                profile_name: profileData.name,
+                profile_headline: profileData.headline,
+                profile_location: profileData.location,
+                profile_data: profileData,
+                ai_analysis: analysis,
+              });
+
+            if (insertError) {
+              console.error('Error saving analysis:', insertError);
+            } else {
+              console.log('Analysis saved successfully');
+            }
           }
         } else {
           console.log('Invalid auth token');

@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+type AccountType = 'individual' | 'organization';
+
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [accountType, setAccountType] = useState<AccountType>('individual');
+  const [organizationName, setOrganizationName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -18,6 +22,12 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
 
+    if (accountType === 'organization' && !organizationName.trim()) {
+      setError('Organization name is required');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -25,6 +35,8 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: fullName,
+            account_type: accountType,
+            organization_name: organizationName,
           },
         },
       });
@@ -113,6 +125,103 @@ export default function SignupPage() {
         )}
 
         <form onSubmit={handleSignup}>
+          {/* Account Type Selection */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '12px',
+              color: '#2d3748'
+            }}>
+              Account Type
+            </label>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setAccountType('individual')}
+                style={{
+                  flex: 1,
+                  padding: '16px',
+                  border: accountType === 'individual' ? '2px solid #667eea' : '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  background: accountType === 'individual' ? '#eef2ff' : 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ fontSize: '24px', marginBottom: '4px' }}>👤</div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: accountType === 'individual' ? '#667eea' : '#2d3748',
+                  marginBottom: '4px'
+                }}>
+                  Individual
+                </div>
+                <div style={{ fontSize: '11px', color: '#718096' }}>
+                  For personal use
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setAccountType('organization')}
+                style={{
+                  flex: 1,
+                  padding: '16px',
+                  border: accountType === 'organization' ? '2px solid #667eea' : '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  background: accountType === 'organization' ? '#eef2ff' : 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ fontSize: '24px', marginBottom: '4px' }}>🏢</div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: accountType === 'organization' ? '#667eea' : '#2d3748',
+                  marginBottom: '4px'
+                }}>
+                  Organization
+                </div>
+                <div style={{ fontSize: '11px', color: '#718096' }}>
+                  For teams & companies
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {accountType === 'organization' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                marginBottom: '8px',
+                color: '#2d3748'
+              }}>
+                Organization Name
+              </label>
+              <input
+                type="text"
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
+                required
+                placeholder="Acme Corp"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          )}
+
           <div style={{ marginBottom: '20px' }}>
             <label style={{
               display: 'block',

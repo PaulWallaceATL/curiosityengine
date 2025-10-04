@@ -22,11 +22,18 @@ export async function POST(req: NextRequest) {
   try {
     const origin = req.headers.get('origin') || '';
     const body = await req.json();
-    const { email, password, fullName } = body;
+    const { email, password, fullName, accountType, organizationName } = body;
 
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
+        { status: 400, headers: corsHeaders(origin) }
+      );
+    }
+
+    if (accountType === 'organization' && !organizationName) {
+      return NextResponse.json(
+        { error: 'Organization name is required for organization accounts' },
         { status: 400, headers: corsHeaders(origin) }
       );
     }
@@ -38,6 +45,8 @@ export async function POST(req: NextRequest) {
       options: {
         data: {
           full_name: fullName,
+          account_type: accountType || 'individual',
+          organization_name: organizationName,
         },
       },
     });
@@ -53,7 +62,9 @@ export async function POST(req: NextRequest) {
       { 
         ok: true, 
         user: data.user,
-        message: 'Account created successfully!'
+        message: accountType === 'organization' 
+          ? 'Organization account created successfully! You are now the organization administrator.'
+          : 'Account created successfully!'
       },
       { headers: corsHeaders(origin) }
     );
