@@ -29,6 +29,9 @@ function Popup() {
   
   // User context state
   const [userContext, setUserContext] = useState<UserContext>({ aboutMe: "", objectives: "" });
+  const [tempContext, setTempContext] = useState<UserContext>({ aboutMe: "", objectives: "" });
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveMessage, setSaveMessage] = useState<string>("");
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -71,6 +74,7 @@ function Popup() {
         const result = await chrome.storage.local.get(['userContext']);
         if (result.userContext) {
           setUserContext(result.userContext);
+          setTempContext(result.userContext);
         }
       } catch (e) {
         console.error("Error loading context:", e);
@@ -80,6 +84,11 @@ function Popup() {
       loadContext();
     }
   }, [isAuthenticated]);
+
+  // Sync tempContext with userContext when it changes
+  useEffect(() => {
+    setTempContext(userContext);
+  }, [userContext]);
 
   // Save user context to storage
   async function saveUserContext(context: UserContext) {
@@ -1399,10 +1408,6 @@ function Popup() {
 
   // Context Page Component
   const renderContextPage = () => {
-    const [tempContext, setTempContext] = useState(userContext);
-    const [saving, setSaving] = useState(false);
-    const [saveMessage, setSaveMessage] = useState("");
-
     const handleSave = async () => {
       setSaving(true);
       await saveUserContext(tempContext);
