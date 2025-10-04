@@ -17,6 +17,7 @@ function Popup() {
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showLogin, setShowLogin] = useState<boolean>(true); // true = login, false = signup
+  const [showPasswordReset, setShowPasswordReset] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [fullName, setFullName] = useState<string>("");
@@ -132,6 +133,37 @@ function Popup() {
     setIsAuthenticated(false);
     setUser(null);
     setResponse("");
+  }
+
+  async function handlePasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+    setAuthSuccess("");
+
+    try {
+      const res = await chrome.runtime.sendMessage({
+        type: "PING_API",
+        url: `${apiBase}/api/auth/reset-password`,
+        method: "POST",
+        body: { email },
+      });
+
+      if (res.ok) {
+        setAuthSuccess("Password reset email sent! Check your inbox.");
+        setTimeout(() => {
+          setShowPasswordReset(false);
+          setShowLogin(true);
+          setAuthSuccess("");
+        }, 4000);
+      } else {
+        setAuthError(res.data?.error || "Failed to send reset email");
+      }
+    } catch (err) {
+      setAuthError("Connection error. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
   }
 
   async function analyzeLinkedInPage() {
@@ -411,7 +443,7 @@ function Popup() {
               color: "#64748b",
               margin: 0
             }}>
-              AI-Powered LinkedIn Intelligence
+              {showPasswordReset ? 'Reset Your Password' : 'AI-Powered LinkedIn Intelligence'}
             </p>
           </div>
         </div>
@@ -446,7 +478,109 @@ function Popup() {
             </div>
           )}
 
-          <form onSubmit={showLogin ? handleLogin : handleSignup}>
+          {showPasswordReset ? (
+            /* Password Reset Form */
+            <form onSubmit={handlePasswordReset}>
+              <p style={{
+                fontSize: 13,
+                color: "#475569",
+                marginBottom: 16,
+                lineHeight: 1.5
+              }}>
+                Enter your email address and we'll send you instructions to reset your password.
+              </p>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  color: "#334155"
+                }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    outline: "none",
+                    transition: "all 0.2s ease"
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#0ea5e9";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14, 165, 233, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: authLoading 
+                    ? "#94a3b8" 
+                    : "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: authLoading ? "not-allowed" : "pointer",
+                  boxShadow: authLoading ? "none" : "0 4px 14px rgba(14, 165, 233, 0.35)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {authLoading ? "Sending..." : "Send Reset Link"}
+              </button>
+
+              <div style={{
+                marginTop: 16,
+                textAlign: "center",
+                fontSize: 12,
+                color: "#64748b"
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordReset(false);
+                    setShowLogin(true);
+                    setAuthError("");
+                    setAuthSuccess("");
+                    setEmail("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#0ea5e9",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    padding: 0
+                  }}
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Login/Signup Form */
+            <>
+            <form onSubmit={showLogin ? handleLogin : handleSignup}>
             {!showLogin && (
               <div style={{ marginBottom: 14 }}>
                 <label style={{
@@ -586,6 +720,35 @@ function Popup() {
             </button>
           </form>
 
+          {showLogin && (
+            <div style={{
+              marginTop: 12,
+              textAlign: "center",
+              fontSize: 12
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordReset(true);
+                  setShowLogin(false);
+                  setAuthError("");
+                  setAuthSuccess("");
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  padding: 0,
+                  textDecoration: "underline"
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+
           <div style={{
             marginTop: 16,
             textAlign: "center",
@@ -594,8 +757,10 @@ function Popup() {
           }}>
             {showLogin ? "Don't have an account?" : "Already have an account?"}{' '}
             <button
+              type="button"
               onClick={() => {
                 setShowLogin(!showLogin);
+                setShowPasswordReset(false);
                 setAuthError("");
                 setAuthSuccess("");
                 setEmail("");
@@ -616,6 +781,8 @@ function Popup() {
               {showLogin ? "Sign up" : "Sign in"}
             </button>
           </div>
+          </>
+          )}
         </div>
       </div>
     );
