@@ -41,6 +41,8 @@ function Popup() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [fullName, setFullName] = useState<string>("");
+  const [accountType, setAccountType] = useState<'individual' | 'organization'>('individual');
+  const [organizationName, setOrganizationName] = useState<string>("");
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>("");
   const [authSuccess, setAuthSuccess] = useState<string>("");
@@ -166,21 +168,39 @@ function Popup() {
     setAuthLoading(true);
     setAuthError("");
 
+    // Validate organization name if organization account
+    if (accountType === 'organization' && !organizationName.trim()) {
+      setAuthError("Organization name is required for organization accounts");
+      setAuthLoading(false);
+      return;
+    }
+
     try {
     const res = await chrome.runtime.sendMessage({
       type: "PING_API",
         url: `${apiBase}/api/auth/signup`,
         method: "POST",
-        body: { email, password, fullName },
+        body: { 
+          email, 
+          password, 
+          fullName,
+          accountType,
+          organizationName: accountType === 'organization' ? organizationName : undefined
+        },
       });
 
       if (res.ok && res.data?.user) {
         setAuthError("");
-        setAuthSuccess("Account created successfully! Please sign in.");
+        const message = accountType === 'organization' 
+          ? "Organization created! You are now the admin. Please sign in."
+          : "Account created successfully! Please sign in.";
+        setAuthSuccess(message);
         setShowLogin(true);
         setEmail("");
         setPassword("");
         setFullName("");
+        setAccountType('individual');
+        setOrganizationName("");
         setTimeout(() => setAuthSuccess(""), 5000);
       } else {
         setAuthError(res.data?.error || "Signup failed");
@@ -670,6 +690,106 @@ function Popup() {
             <>
             <form onSubmit={showLogin ? handleLogin : handleSignup}>
             {!showLogin && (
+              <>
+              {/* Account Type Selection */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{
+                  display: "block",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 8,
+                  color: "#0f172a"
+                }}>
+                  Account Type
+                </label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('individual')}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      border: accountType === 'individual' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
+                      borderRadius: 8,
+                      background: accountType === 'individual' ? '#eff6ff' : 'white',
+                      cursor: 'pointer',
+                      fontSize: 12
+                    }}
+                  >
+                    <div style={{ fontSize: 16, marginBottom: 2 }}>👤</div>
+                    <div style={{ 
+                      fontWeight: 600, 
+                      color: accountType === 'individual' ? '#0ea5e9' : '#0f172a'
+                    }}>
+                      Individual
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('organization')}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      border: accountType === 'organization' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
+                      borderRadius: 8,
+                      background: accountType === 'organization' ? '#eff6ff' : 'white',
+                      cursor: 'pointer',
+                      fontSize: 12
+                    }}
+                  >
+                    <div style={{ fontSize: 16, marginBottom: 2 }}>🏢</div>
+                    <div style={{ 
+                      fontWeight: 600, 
+                      color: accountType === 'organization' ? '#0ea5e9' : '#0f172a'
+                    }}>
+                      Organization
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Organization Name (conditional) */}
+              {accountType === 'organization' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{
+                    display: "block",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 8,
+                    color: "#0f172a"
+                  }}>
+                    Organization Name
+                  </label>
+                  <input
+                    type="text"
+                    value={organizationName}
+                    onChange={(e) => setOrganizationName(e.target.value)}
+                    required
+                    placeholder="Acme Corp"
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: 10,
+                      fontSize: 14,
+                      outline: "none",
+                      transition: "all 0.2s ease",
+                      boxSizing: "border-box",
+                      background: "white"
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "#0ea5e9";
+                      e.currentTarget.style.boxShadow = "0 0 0 4px rgba(14, 165, 233, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "#e2e8f0";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+              )}
+
               <div style={{ marginBottom: 16 }}>
                 <label style={{
                   display: "block",
@@ -707,6 +827,7 @@ function Popup() {
                   }}
                 />
               </div>
+              </>
             )}
 
               <div style={{ marginBottom: 16 }}>
@@ -873,6 +994,8 @@ function Popup() {
                 setEmail("");
                 setPassword("");
                 setFullName("");
+                setAccountType('individual');
+                setOrganizationName("");
               }}
               style={{
                 background: "none",
