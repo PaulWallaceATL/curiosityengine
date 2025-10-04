@@ -68,15 +68,34 @@ function Popup() {
       try {
         const result = await chrome.storage.local.get(['authToken', 'user']);
         if (result.authToken && result.user) {
-          setIsAuthenticated(true);
-          setUser(result.user);
+          // Verify token is still valid by calling an API
+          const res = await chrome.runtime.sendMessage({
+            type: "PING_API",
+            url: `${apiBase}/api/user/stats`,
+            method: "GET",
+            authToken: result.authToken,
+          });
+
+          if (res.ok) {
+            // Token is valid
+            setIsAuthenticated(true);
+            setUser(result.user);
+          } else {
+            // Token is invalid, clear storage
+            console.log("Cached token is invalid, clearing storage");
+            await chrome.storage.local.clear();
+            setIsAuthenticated(false);
+            setUser(null);
+          }
         }
       } catch (e) {
         console.error("Error checking auth:", e);
+        // On error, clear storage to be safe
+        await chrome.storage.local.clear();
       }
     }
     checkAuth();
-  }, []);
+  }, [apiBase]);
 
   // Load user context from storage
   useEffect(() => {
@@ -288,10 +307,19 @@ function Popup() {
   }
 
   async function handleLogout() {
-    await chrome.storage.local.remove(['authToken', 'user']);
+    // Clear ALL extension storage
+    await chrome.storage.local.clear();
     setIsAuthenticated(false);
     setUser(null);
+    setOrganization(null);
+    setUserRole('member');
+    setEnabledIntegrations([]);
+    setUserStats(null);
+    setUserContext({ aboutMe: "", objectives: "" });
     setResponse("");
+    setActionType(null);
+    setLinkedinUrl("");
+    setEmailContext("");
   }
 
   async function handlePasswordReset(e: React.FormEvent) {
@@ -1084,6 +1112,43 @@ function Popup() {
               }}
             >
               {showLogin ? "Sign up" : "Sign in"}
+            </button>
+          </div>
+
+          {/* Troubleshooting: Clear Cache */}
+          <div style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid #e5e7eb",
+            textAlign: "center"
+          }}>
+            <p style={{
+              fontSize: 11,
+              color: "#94a3b8",
+              marginBottom: 8
+            }}>
+              Having login issues?
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                await chrome.storage.local.clear();
+                setAuthError("");
+                setAuthSuccess("✓ Cache cleared! Please try logging in again.");
+                setTimeout(() => setAuthSuccess(""), 3000);
+              }}
+              style={{
+                background: "none",
+                border: "1px solid #e2e8f0",
+                color: "#64748b",
+                fontSize: 11,
+                padding: "6px 12px",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: 600
+              }}
+            >
+              🔄 Clear Cache & Retry
             </button>
           </div>
           </>

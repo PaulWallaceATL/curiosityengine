@@ -39,23 +39,85 @@ export async function POST(req: NextRequest) {
     }
 
     // Create user with Supabase auth
-    const { data, error } = await supabase.auth.signUp({
+    // Using service role key with admin.createUser to bypass email confirmation
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          account_type: accountType || 'individual',
-          organization_name: organizationName,
-        },
+      email_confirm: true, // Auto-confirm email (no confirmation email needed)
+      user_metadata: {
+        full_name: fullName,
+        account_type: accountType || 'individual',
+        organization_name: organizationName,
       },
     });
 
     if (error) {
+      console.error('Supabase signup error:', error);
       return NextResponse.json(
         { error: error.message },
         { status: 400, headers: corsHeaders(origin) }
       );
+    }
+
+    if (!data.user) {
+      return NextResponse.json(
+        { error: 'User creation failed - no user data returned' },
+        { status: 500, headers: corsHeaders(origin) }
+      );
+    }
+
+    console.log('User created successfully:', data.user.id, data.user.email);
+
+    // Wait a moment for the trigger to create the user record in public.users
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Verify user was created in public.users table
+    const { data: userData, error: userCheckError } = await supabase
+      .from('users')
+      .select('id, role, organization_id')
+      .eq('id', data.user.id)
+      .single();
+
+    if (userCheckError || !userData) {
+      console.error('User not found in public.users after signup:', userCheckError);
+      console.log('Attempting to manually create user record...');
+      
+      // Manually create organization and user if trigger didn't work
+      let orgId;
+      if (accountType === 'organization') {
+        const { data: org } = await supabase
+          .from('organizations')
+          .insert({ name: organizationName || 'My Organization', account_type: 'organization' })
+          .select()
+          .single();
+        orgId = org?.id;
+      } else {
+        const { data: org } = await supabase
+          .from('organizations')
+          .insert({ name: `${fullName || email}'s Workspace`, account_type: 'individual' })
+          .select()
+          .single();
+        orgId = org?.id;
+      }
+
+      // Create user record manually
+      const { error: manualUserError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email!,
+          full_name: fullName,
+          organization_id: orgId,
+          role: accountType === 'organization' ? 'org_admin' : 'member',
+        });
+
+      if (manualUserError) {
+        console.error('Manual user creation also failed:', manualUserError);
+      } else {
+        console.log('User manually created successfully');
+      }
+    } else {
+      console.log('User found in public.users table:', userData);
     }
 
     return NextResponse.json(
@@ -71,7 +133,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Signup error:', err);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Internal Server Error: ' + (err as Error).message },
       { status: 500, headers: corsHeaders() }
     );
   }
