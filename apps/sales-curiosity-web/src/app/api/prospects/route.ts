@@ -156,17 +156,27 @@ Be specific and actionable. If information is limited, focus on what you can inf
       
       // Generate different mock responses based on action type
       if (action === 'email') {
+        const firstName = profileData.name?.split(' ')[0] || 'there';
+        const workArea = profileData.headline ? profileData.headline.split('|')[0].trim().toLowerCase() : 'your field';
+        const locationText = profileData.location ? `Being based in ${profileData.location}, you are ` : 'You are ';
+        const industryChallenge = profileData.headline?.includes('AI') ? 'scaling AI solutions' : profileData.headline?.includes('healthcare') ? 'healthcare innovation' : 'your industry';
+        const roleType = profileData.headline?.includes('CMO') ? 'marketing leaders' : profileData.headline?.includes('CEO') ? 'executives' : 'professionals like you';
+        const userContextIntro = userContext?.aboutMe ? `As someone working in ${userContext.aboutMe.split(',')[0]}, ` : '';
+        const objectives = userContext?.objectives || 'achieve their business goals';
+        const emailContextText = emailContext ? ` ${emailContext.substring(0, 100)}` : '';
+        const workReference = profileData.headline ? ` in ${profileData.headline.toLowerCase()}` : '';
+        
         analysis = `**Subject:** ${profileData.name ? `Quick question about ${profileData.headline?.split('|')[0].trim() || 'your work'}` : 'Exploring collaboration opportunities'}
 
 **Email:**
 
-Hi ${profileData.name?.split(' ')[0] || 'there'},
+Hi ${firstName},
 
-I came across your profile and was impressed by your work in ${profileData.headline ? profileData.headline.split('|')[0].trim().toLowerCase() : 'your field'}. ${profileData.location ? `Being based in ${profileData.location}, you're ` : 'You're '}likely facing some interesting challenges in ${profileData.headline?.includes('AI') ? 'scaling AI solutions' : profileData.headline?.includes('healthcare') ? 'healthcare innovation' : 'your industry'}.
+I came across your profile and was impressed by your work in ${workArea}. ${locationText}likely facing some interesting challenges in ${industryChallenge}.
 
-${userContext?.aboutMe ? `As someone working in ${userContext.aboutMe.split(',')[0]}, ` : ''}I've been helping ${profileData.headline?.includes('CMO') ? 'marketing leaders' : profileData.headline?.includes('CEO') ? 'executives' : 'professionals like you'} ${userContext?.objectives || 'achieve their business goals'}.${emailContext ? ` ${emailContext.substring(0, 100)}` : ''}
+${userContextIntro}I've been helping ${roleType} ${objectives}.${emailContextText}
 
-Would you be open to a brief call to explore how we might be able to help? I have some specific ideas that could be relevant to your work${profileData.headline ? ` in ${profileData.headline.toLowerCase()}` : ''}.
+Would you be open to a brief call to explore how we might be able to help? I have some specific ideas that could be relevant to your work${workReference}.
 
 Looking forward to connecting!
 
