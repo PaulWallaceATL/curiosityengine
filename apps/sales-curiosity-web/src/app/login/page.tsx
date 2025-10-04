@@ -1,15 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      setSuccessMessage(message);
+    }
+  }, [searchParams]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -27,32 +36,14 @@ export default function LoginPage() {
         if (error.message.includes('Invalid login credentials') || 
             error.message.includes('Email not confirmed') ||
             error.message.includes('User not found')) {
-          router.push('/signup?message=Please create an account to get started');
+          setError(error.message);
           return;
         }
         throw error;
       }
 
-      // Verify user exists in our database
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      // If user doesn't exist in our database, sign them out and redirect to signup
-      if (userError || !userData) {
-        await supabase.auth.signOut();
-        router.push('/signup?message=Account not found. Please sign up');
-        return;
-      }
-
-      // Redirect based on role
-      if (userData.role === 'org_admin' || userData.role === 'super_admin') {
-        router.push('/admin/organization');
-      } else {
-        router.push('/'); // Home page for regular users
-      }
+      // Login successful - redirect to dashboard which will handle role-based routing
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to login');
     } finally {
@@ -93,6 +84,20 @@ export default function LoginPage() {
         }}>
           Sign in to analyze LinkedIn profiles
         </p>
+
+        {successMessage && (
+          <div style={{
+            padding: '12px',
+            background: '#d1fae5',
+            color: '#065f46',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            border: '1px solid #6ee7b7'
+          }}>
+            ✓ {successMessage}
+          </div>
+        )}
 
         {error && (
           <div style={{
@@ -216,6 +221,24 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}>
+        <div style={{ color: 'white' }}>Loading...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 

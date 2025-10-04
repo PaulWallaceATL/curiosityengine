@@ -39,23 +39,30 @@ function SignupForm() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            account_type: accountType,
-            organization_name: organizationName,
-          },
+      // Call our signup API which uses admin.createUser with email_confirm
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          accountType,
+          organizationName,
+        }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to create account');
+      }
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/login');
+        router.push('/login?message=Account created! Please sign in.');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
