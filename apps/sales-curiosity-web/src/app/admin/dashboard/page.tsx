@@ -8,7 +8,7 @@ interface User {
   id: string;
   email: string;
   full_name: string;
-  is_admin: boolean;
+  role: 'super_admin' | 'org_admin' | 'member';
   created_at: string;
 }
 
@@ -50,8 +50,8 @@ export default function AdminDashboard() {
       .eq('id', user.id)
       .single();
 
-    if (!userData?.is_admin) {
-      router.push('/dashboard');
+    if (!userData || userData.role === 'member') {
+      router.push('/');
       return;
     }
 
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
               Admins
             </p>
             <p style={{ fontSize: '32px', fontWeight: '700', color: '#1a202c' }}>
-              {users.filter(u => u.is_admin).length}
+              {users.filter(u => u.role === 'org_admin' || u.role === 'super_admin').length}
             </p>
           </div>
         </div>
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
                   marginBottom: '4px'
                 }}>
                   {user.full_name || 'No name'}
-                  {user.is_admin && (
+                  {(user.role === 'org_admin' || user.role === 'super_admin') && (
                     <span style={{
                       marginLeft: '8px',
                       padding: '2px 8px',

@@ -22,19 +22,28 @@ export default function LoginPage() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's an invalid credentials error
+        if (error.message.includes('Invalid login credentials') || 
+            error.message.includes('Email not confirmed') ||
+            error.message.includes('User not found')) {
+          throw new Error('Invalid email or password. Don\'t have an account? Sign up below.');
+        }
+        throw error;
+      }
 
-      // Check if user is admin
+      // Check user role and redirect appropriately
       const { data: userData } = await supabase
         .from('users')
-        .select('is_admin')
+        .select('role')
         .eq('id', data.user.id)
         .single();
 
-      if (userData?.is_admin) {
-        router.push('/admin');
+      // Redirect based on role
+      if (userData?.role === 'org_admin' || userData?.role === 'super_admin') {
+        router.push('/admin/organization');
       } else {
-        router.push('/dashboard');
+        router.push('/'); // Home page for regular users
       }
     } catch (err: any) {
       setError(err.message || 'Failed to login');
