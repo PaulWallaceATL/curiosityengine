@@ -20,25 +20,34 @@ export default function DashboardPage() {
       return;
     }
 
-    // Get user's role from our database
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
+    try {
+      // Get user's role from API (uses service role, bypasses RLS)
+      const response = await fetch('/api/user/role', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
 
-    // If user doesn't exist in our database, sign out and redirect to signup
-    if (error || !userData) {
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('Failed to get user role:', data);
+        await supabase.auth.signOut();
+        router.push('/signup?message=Account setup incomplete. Please sign up again.');
+        return;
+      }
+
+      const data = await response.json();
+
+      // Redirect based on role
+      if (data.role === 'org_admin' || data.role === 'super_admin') {
+        router.push('/admin/organization');
+      } else {
+        router.push('/'); // Regular users go to home
+      }
+    } catch (err) {
+      console.error('Error during redirect:', err);
       await supabase.auth.signOut();
-      router.push('/signup');
-      return;
-    }
-
-    // Redirect based on role
-    if (userData.role === 'org_admin' || userData.role === 'super_admin') {
-      router.push('/admin/organization');
-    } else {
-      router.push('/'); // Regular users go to home
+      router.push('/login');
     }
   }
 

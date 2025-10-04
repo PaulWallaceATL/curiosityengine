@@ -59,25 +59,55 @@ export default function Home() {
       return;
     }
 
-    // Check if user exists in our users table and get their org info
-    const { data: user, error } = await supabase
+    try {
+      // Get user data using API (bypasses RLS)
+      const response = await fetch('/api/user/role', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Failed to get user role');
+        await supabase.auth.signOut();
+        setIsAuthenticated(false);
+        setUserData(null);
+        return;
+      }
+
+      const roleData = await response.json();
+
+      // Get full user data with org info using service role
+      const { data: user, error } = await supabase
       .from('users')
-      .select('id, full_name, role, organizations(id, name, account_type)')
+        .select('id, full_name, role, organizations(id, name, account_type)')
       .eq('id', session.user.id)
       .single();
 
-    // Only authenticate if user exists in our database
-    if (error || !user) {
-      await supabase.auth.signOut();
-      setIsAuthenticated(false);
-      setUserData(null);
-    } else {
-      setIsAuthenticated(true);
-      setUserData(user);
+      if (error || !user) {
+        console.error('User data fetch error:', error);
+        // Still set as authenticated if we have role data
+        setIsAuthenticated(true);
+        setUserData({
+          id: session.user.id,
+          role: roleData.role,
+          organizations: {
+            account_type: roleData.accountType
+          }
+        });
+      } else {
+        setIsAuthenticated(true);
+        setUserData(user);
+      }
+      
       // Load additional data
       loadUserContext(session.user.id);
       loadUserStats();
       loadIntegrations();
+    } catch (err) {
+      console.error('Auth check error:', err);
+      setIsAuthenticated(false);
+      setUserData(null);
     }
   }
 
@@ -201,7 +231,7 @@ export default function Home() {
         });
         // Reload stats
         loadUserStats();
-      } else {
+    } else {
         setError(data.error || 'Failed to analyze profile');
       }
     } catch (err: any) {
