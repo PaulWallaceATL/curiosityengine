@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 function Popup() {
   const [apiBase, setApiBase] = useState<string>(
     (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) ||
-      "http://localhost:3000"
+      "https://curiosityengine-sales-curiosity-web.vercel.app"
   );
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const [isLinkedIn, setIsLinkedIn] = useState<boolean>(false);
