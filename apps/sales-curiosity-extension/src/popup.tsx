@@ -848,17 +848,17 @@ function Popup() {
   // Home Page Component
   const renderHomePage = () => {
     if (!isLinkedIn) {
-      return (
-        <div style={{
-          background: "white",
+  return (
+      <div style={{
+        background: "white",
           padding: "20px",
           borderRadius: 12,
           border: "2px solid #fbbf24",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)"
         }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
+            <div style={{
+              display: "flex",
+              alignItems: "center",
             gap: 12,
             marginBottom: 12
           }}>
@@ -871,67 +871,67 @@ function Popup() {
               Not a LinkedIn Page
             </strong>
           </div>
-          <p style={{
-            margin: 0,
+              <p style={{
+                margin: 0,
             fontSize: 13,
             color: "#78350f",
             lineHeight: 1.6
-          }}>
+              }}>
             Please navigate to a LinkedIn profile page to analyze it with AI-powered insights.
-          </p>
-        </div>
+              </p>
+            </div>
       );
     }
 
     return (
-      <>
-        {/* URL Display Card */}
-        <div style={{
-          background: "white",
-          padding: "16px",
-          borderRadius: 12,
-          marginBottom: 16,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e5e7eb"
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 8
-          }}>
+          <>
+            {/* URL Display Card */}
             <div style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              background: "#0077b5",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "white"
+              background: "white",
+              padding: "16px",
+              borderRadius: 12,
+              marginBottom: 16,
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+              border: "1px solid #e5e7eb"
             }}>
-              in
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8
+              }}>
+                <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  background: "#0077b5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "white"
+                }}>
+                  in
+                </div>
+                <span style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#0f172a"
+                }}>
+                  LinkedIn Profile Detected
+                </span>
+              </div>
+              <div style={{
+                fontSize: 11,
+                color: "#64748b",
+                wordBreak: "break-all",
+                lineHeight: 1.5,
+                paddingLeft: 32
+              }}>
+                {currentUrl}
+              </div>
             </div>
-            <span style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#0f172a"
-            }}>
-              LinkedIn Profile Detected
-            </span>
-          </div>
-          <div style={{
-            fontSize: 11,
-            color: "#64748b",
-            wordBreak: "break-all",
-            lineHeight: 1.5,
-            paddingLeft: 32
-          }}>
-            {currentUrl}
-          </div>
-        </div>
 
         {/* Action Selection */}
         {!actionType && !response && (
@@ -957,12 +957,12 @@ function Popup() {
                 gap: 10
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.transform = "translateY(-1px)";
-                e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.4)";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(14, 165, 233, 0.4)";
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 14px rgba(14, 165, 233, 0.35)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(14, 165, 233, 0.35)";
               }}
             >
               <span style={{ fontSize: 20 }}>🔍</span>
@@ -1139,24 +1139,24 @@ function Popup() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8
-                }}
-              >
-                {loading ? (
-                  <>
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      border: "2px solid rgba(255,255,255,0.3)",
-                      borderTop: "2px solid white",
-                      borderRadius: "50%",
-                      animation: "spin 0.8s linear infinite"
-                    }} />
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{
+                    width: 16,
+                    height: 16,
+                    border: "2px solid rgba(255,255,255,0.3)",
+                    borderTop: "2px solid white",
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite"
+                  }} />
                     Analyzing...
-                  </>
-                ) : (
+                </>
+              ) : (
                   "Start Analysis"
-                )}
-              </button>
+              )}
+            </button>
               <button
                 onClick={() => setActionType(null)}
                 disabled={loading}
@@ -1166,7 +1166,7 @@ function Popup() {
                   color: "#475569",
                   border: "none",
                   borderRadius: 8,
-                  fontSize: 13,
+              fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer"
                 }}
@@ -1307,7 +1307,7 @@ function Popup() {
                   title="Clear"
                 >
                   ×
-                </button>
+        </button>
               </div>
             </div>
 
@@ -1442,7 +1442,7 @@ function Popup() {
           }}>
             This information will be used to personalize AI-generated analyses and emails.
           </p>
-        </div>
+      </div>
 
         {saveMessage && (
           <div style={{
@@ -1775,10 +1775,12 @@ function Popup() {
   const renderNavigation = () => (
     <div style={{
       background: "white",
-      borderBottom: "1px solid #e5e7eb",
+      borderBottom: "2px solid #e5e7eb",
       display: "flex",
       justifyContent: "space-around",
       padding: "0",
+      position: "relative",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
     }}>
       {[
         { id: "home" as Page, icon: "🏠", label: "Home" },
@@ -1794,35 +1796,42 @@ function Popup() {
           }}
           style={{
             flex: 1,
-            padding: "12px 8px",
+            padding: "14px 8px",
             background: currentPage === page.id ? "#f0f9ff" : "transparent",
             border: "none",
-            borderBottom: currentPage === page.id ? "2px solid #0ea5e9" : "2px solid transparent",
+            borderBottom: currentPage === page.id ? "3px solid #0ea5e9" : "3px solid transparent",
             cursor: "pointer",
             fontSize: 11,
             fontWeight: 600,
             color: currentPage === page.id ? "#0ea5e9" : "#64748b",
-            transition: "all 0.2s ease",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 4,
+            gap: 6,
+            position: "relative"
           }}
           onMouseOver={(e) => {
             if (currentPage !== page.id) {
               e.currentTarget.style.background = "#f8fafc";
               e.currentTarget.style.color = "#475569";
+              e.currentTarget.style.transform = "translateY(-1px)";
             }
           }}
           onMouseOut={(e) => {
             if (currentPage !== page.id) {
               e.currentTarget.style.background = "transparent";
               e.currentTarget.style.color = "#64748b";
+              e.currentTarget.style.transform = "translateY(0)";
             }
           }}
         >
-          <span style={{ fontSize: 18 }}>{page.icon}</span>
-          <span>{page.label}</span>
+          <span style={{ 
+            fontSize: 20,
+            transition: "transform 0.2s ease",
+            display: "inline-block"
+          }}>{page.icon}</span>
+          <span style={{ letterSpacing: "0.3px" }}>{page.label}</span>
         </button>
       ))}
     </div>
@@ -1833,9 +1842,13 @@ function Popup() {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'SF Pro Display', system-ui, sans-serif",
       width: 420,
       minHeight: 500,
+      maxHeight: 600,
       background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
       padding: 0,
-      margin: 0
+      margin: 0,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
     }}>
       {/* Header */}
       <div style={{
@@ -1908,13 +1921,18 @@ function Popup() {
       {renderNavigation()}
 
       {/* Content Area - Render based on current page */}
-      <div style={{ padding: "24px" }}>
+      <div style={{ 
+        padding: "24px", 
+        flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden"
+      }}>
         {currentPage === "home" && renderHomePage()}
         {currentPage === "context" && renderContextPage()}
         {currentPage === "integrations" && renderIntegrationsPage()}
       </div>
 
-      {/* Add keyframe animations */}
+      {/* Enhanced animations and global styles */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -1928,6 +1946,48 @@ function Popup() {
             opacity: 1;
             transform: translateY(0);
           }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        * {
+          box-sizing: border-box;
+        }
+        button {
+          -webkit-tap-highlight-color: transparent;
+          user-select: none;
+        }
+        input, textarea {
+          font-family: inherit;
+        }
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
         }
       `}</style>
     </div>
