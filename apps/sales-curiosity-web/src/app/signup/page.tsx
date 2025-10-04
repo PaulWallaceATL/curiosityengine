@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type AccountType = 'individual' | 'organization';
@@ -15,7 +15,17 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check for message in URL
+    const message = searchParams.get('message');
+    if (message) {
+      setInfoMessage(message);
+    }
+  }, [searchParams]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -110,6 +120,19 @@ export default function SignupPage() {
         }}>
           Get started with Sales Curiosity
         </p>
+
+        {infoMessage && (
+          <div style={{
+            padding: '12px',
+            background: '#dbeafe',
+            color: '#1e40af',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px'
+          }}>
+            {infoMessage}
+          </div>
+        )}
 
         {error && (
           <div style={{
@@ -216,7 +239,8 @@ export default function SignupPage() {
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '14px',
-                  outline: 'none'
+                  outline: 'none',
+                  color: '#1a202c'
                 }}
               />
             </div>
@@ -244,7 +268,8 @@ export default function SignupPage() {
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                color: '#1a202c'
               }}
             />
           </div>
@@ -271,7 +296,8 @@ export default function SignupPage() {
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                color: '#1a202c'
               }}
             />
           </div>
@@ -299,7 +325,8 @@ export default function SignupPage() {
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                color: '#1a202c'
               }}
             />
             <p style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>

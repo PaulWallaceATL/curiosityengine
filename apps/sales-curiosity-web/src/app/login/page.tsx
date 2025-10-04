@@ -23,11 +23,12 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // Check if it's an invalid credentials error
+        // Check if it's an invalid credentials error - redirect to signup
         if (error.message.includes('Invalid login credentials') || 
             error.message.includes('Email not confirmed') ||
             error.message.includes('User not found')) {
-          throw new Error('Invalid email or password. Don\'t have an account? Sign up below.');
+          router.push('/signup?message=Please create an account to get started');
+          return;
         }
         throw error;
       }
@@ -39,10 +40,11 @@ export default function LoginPage() {
         .eq('id', data.user.id)
         .single();
 
-      // If user doesn't exist in our database, sign them out and show error
+      // If user doesn't exist in our database, sign them out and redirect to signup
       if (userError || !userData) {
         await supabase.auth.signOut();
-        throw new Error('Account setup incomplete. Please sign up again.');
+        router.push('/signup?message=Account not found. Please sign up');
+        return;
       }
 
       // Redirect based on role
@@ -128,7 +130,8 @@ export default function LoginPage() {
                 borderRadius: '8px',
                 fontSize: '14px',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'border-color 0.2s',
+                color: '#1a202c'
               }}
               onFocus={(e) => e.target.style.borderColor = '#667eea'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
@@ -158,7 +161,8 @@ export default function LoginPage() {
                 borderRadius: '8px',
                 fontSize: '14px',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'border-color 0.2s',
+                color: '#1a202c'
               }}
               onFocus={(e) => e.target.style.borderColor = '#667eea'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}

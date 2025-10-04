@@ -141,7 +141,18 @@ function Popup() {
         setEmail("");
         setPassword("");
       } else {
-        setAuthError(res.data?.error || "Login failed");
+        const errorMsg = res.data?.error || "Login failed";
+        // Check if it's an invalid credentials error - redirect to signup
+        if (errorMsg.includes("Invalid") || errorMsg.includes("credentials") || 
+            errorMsg.includes("not found") || errorMsg.includes("setup incomplete")) {
+          setAuthError("");
+          setAuthSuccess("Please create an account to get started");
+          setShowLogin(false); // Switch to signup form
+          setPassword(""); // Clear password but keep email
+          setTimeout(() => setAuthSuccess(""), 5000);
+        } else {
+          setAuthError(errorMsg);
+        }
       }
     } catch (err) {
       setAuthError("Connection error. Check your backend is running.");
