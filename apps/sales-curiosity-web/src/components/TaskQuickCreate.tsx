@@ -47,44 +47,50 @@ export default function TaskQuickCreate() {
   }
 
   return (
-    <form onSubmit={createTask} className="card-surface rounded-xl border bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-base font-medium">Quick task</h2>
-      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Create a task that will appear in the Admin dashboard.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">Type</label>
-          <select
-            className="rounded-md border bg-white px-2 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
-            value={type}
-            onChange={(e) => setType(e.target.value as any)}
-          >
-            <option value="research">research</option>
-            <option value="email">email</option>
-            <option value="briefing">briefing</option>
-          </select>
-        </div>
-        <div className="grid gap-1.5 sm:col-span-2">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">Description</label>
-          <input
-            className="rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What should we do?"
-            ref={inputRef}
-          />
-        </div>
-        <div className="sm:col-span-2 flex items-center gap-3">
-          <button
-            type="submit"
-            className="pressable inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
-            disabled={loading || !description}
-          >
-            {loading ? "Creating…" : "Create task"}
-          </button>
-          {success && <span className="text-xs text-emerald-600">Created!</span>}
-          {error && <span className="text-xs text-red-600">{error}</span>}
-        </div>
+    <form onSubmit={createTask} className="grid gap-3">
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-slate-300">Type</label>
+        <select
+          className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          value={type}
+          onChange={(e) => setType(e.target.value as any)}
+        >
+          <option value="research">Research</option>
+          <option value="email">Email</option>
+          <option value="briefing">Briefing</option>
+        </select>
       </div>
+      
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-slate-300">Description</label>
+        <input
+          className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What should we do?"
+          ref={inputRef}
+        />
+      </div>
+      
+      <button
+        type="submit"
+        className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-700 hover:shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={loading || !description}
+      >
+        {loading ? "Creating…" : "Create task"}
+      </button>
+      
+      {success && (
+        <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/30 px-4 py-2 text-sm text-emerald-400">
+          Task created successfully!
+        </div>
+      )}
+      
+      {error && (
+        <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-2 text-sm text-red-400">
+          {error}
+        </div>
+      )}
     </form>
   );
 }

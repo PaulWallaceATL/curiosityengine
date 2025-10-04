@@ -53,44 +53,42 @@ export default function EmailDrafter() {
   }
 
   return (
-    <form onSubmit={draft} className="mt-4 grid gap-4 lg:grid-cols-2">
+    <form onSubmit={draft} className="grid gap-4">
       <div className="grid gap-3">
-        <div className="grid gap-1.5">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">LinkedIn URL</label>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-slate-300">LinkedIn URL</label>
           <input
-            className="rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
+            className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             placeholder="https://www.linkedin.com/in/..."
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
             ref={inputRef}
           />
         </div>
-        <div className="grid gap-1.5">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">Your personal context</label>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-slate-300">Your personal context</label>
           <textarea
             rows={4}
-            className="resize-none rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
-            placeholder="Who you are, relationship to the prospect, why you’re reaching out, any shared ties"
+            className="resize-none rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            placeholder="Who you are, relationship to the prospect, why you're reaching out, any shared ties"
             value={personalContext}
             onChange={(e) => setPersonalContext(e.target.value)}
           />
         </div>
-        <div className="grid gap-1.5">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">Optional: pasted LinkedIn profile content</label>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-slate-300">Optional: pasted LinkedIn profile content</label>
           <textarea
-            rows={6}
-            className="skeleton resize-none rounded-md border bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
+            rows={4}
+            className="resize-none rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             placeholder="Paste scraped content here to improve personalization"
             value={linkedinContent}
             onChange={(e) => setLinkedinContent(e.target.value)}
           />
         </div>
-      </div>
-      <div className="grid gap-4">
-        <div className="grid gap-1.5">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">Tone</label>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-slate-300">Tone</label>
           <select
-            className="w-fit rounded-md border bg-white px-2 py-1.5 text-sm outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             value={tone}
             onChange={(e) => setTone(e.target.value as any)}
           >
@@ -102,27 +100,43 @@ export default function EmailDrafter() {
         </div>
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-700 hover:shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading || !linkedinUrl || !personalContext}
         >
           {loading ? "Drafting…" : "Draft email"}
         </button>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        {result && (
-          <div className="card-surface rounded-lg border bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="mb-2 flex items-center justify-between">
-              <strong>Subject</strong>
-              <button className="text-xs underline" onClick={(e) => { e.preventDefault(); copy(result.subject); }}>Copy</button>
-            </div>
-            <p className="mb-4">{result.subject}</p>
-            <div className="mb-2 flex items-center justify-between">
-              <strong>Body</strong>
-              <button className="text-xs underline" onClick={(e) => { e.preventDefault(); copy(result.body); }}>Copy</button>
-            </div>
-            <pre className="whitespace-pre-wrap text-sm leading-6">{result.body}</pre>
-          </div>
-        )}
       </div>
+      
+      {error && (
+        <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+      
+      {result && (
+        <div className="rounded-lg border border-slate-700 bg-slate-800/30 p-4 text-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="font-semibold text-white">Subject</span>
+            <button 
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition" 
+              onClick={(e) => { e.preventDefault(); copy(result.subject); }}
+            >
+              Copy
+            </button>
+          </div>
+          <p className="mb-4 text-slate-300">{result.subject}</p>
+          <div className="mb-3 flex items-center justify-between border-t border-slate-700 pt-3">
+            <span className="font-semibold text-white">Body</span>
+            <button 
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition" 
+              onClick={(e) => { e.preventDefault(); copy(result.body); }}
+            >
+              Copy
+            </button>
+          </div>
+          <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-300">{result.body}</pre>
+        </div>
+      )}
     </form>
   );
 }
