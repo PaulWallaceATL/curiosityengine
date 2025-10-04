@@ -95,11 +95,12 @@ function SignupForm() {
       alignItems: 'center',
       justifyContent: 'center',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      padding: '16px'
     }}>
       <div style={{
         background: 'white',
-        padding: '40px',
+        padding: '24px',
         borderRadius: '12px',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
         width: '100%',

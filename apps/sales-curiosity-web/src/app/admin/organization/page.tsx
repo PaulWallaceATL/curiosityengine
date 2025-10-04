@@ -167,8 +167,23 @@ export default function OrganizationDashboard() {
 
       if (error) throw error;
 
-      // TODO: Send invitation email
-      alert(`Invitation sent to ${inviteEmail}! (Email integration pending)`);
+      // Log audit event
+      await supabase.rpc('log_audit_event', {
+        p_organization_id: organization.id,
+        p_action: 'user_invited',
+        p_resource_type: 'invitation',
+        p_details: { email: inviteEmail, role: inviteRole }
+      }).catch(err => console.error('Audit log error:', err));
+
+      // Generate invitation link
+      const inviteUrl = `${window.location.origin}/invite/accept?token=${token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(inviteUrl);
+      
+      // Show success with the link
+      alert(`✅ Invitation created!\n\nInvitation link copied to clipboard.\n\nShare this link with ${inviteEmail}:\n${inviteUrl}\n\n⏰ Expires in 7 days\n\n💡 Tip: Set up email integration to send invitations automatically.`);
+      
       setShowInviteModal(false);
       setInviteEmail('');
       setInviteRole('member');

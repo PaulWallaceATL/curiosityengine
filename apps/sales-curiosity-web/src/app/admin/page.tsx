@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type Task = {
   id: string;
@@ -18,6 +20,55 @@ export default function AdminPage() {
   const [description, setDescription] = useState("");
   const [filter, setFilter] = useState<"all" | Task["type"]>("all");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const router = useRouter();
+
+  // Check authorization on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      router.push('/login');
+      return;
+    }
+
+    // Check if user has admin role
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !userData || (userData.role !== 'org_admin' && userData.role !== 'super_admin')) {
+      router.push('/');
+      return;
+    }
+
+    setAuthorized(true);
+  }
+
+  // Don't render anything until auth check is complete
+  if (authorized === null) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(to bottom, rgb(15 23 42), rgb(15 23 42))'
+      }}>
+        <div style={{ color: '#94a3b8' }}>Checking authorization...</div>
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    return null; // Router will redirect
+  }
 
   async function fetchTasks() {
     setLoading(true);

@@ -47,6 +47,14 @@ function Popup() {
   const [authError, setAuthError] = useState<string>("");
   const [authSuccess, setAuthSuccess] = useState<string>("");
   const [user, setUser] = useState<any>(null);
+  
+  // Organization context
+  const [organization, setOrganization] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>('member');
+  const [enabledIntegrations, setEnabledIntegrations] = useState<string[]>([]);
+  
+  // User stats
+  const [userStats, setUserStats] = useState<any>(null);
 
   useEffect(() => {
     try {
@@ -88,16 +96,83 @@ function Popup() {
     }
   }, [isAuthenticated]);
 
+  // Load organization info when authenticated
+  useEffect(() => {
+    async function loadOrgInfo() {
+      try {
+        const { authToken } = await chrome.storage.local.get(['authToken']);
+        if (!authToken) return;
+
+        const res = await chrome.runtime.sendMessage({
+          type: "PING_API",
+          url: `${apiBase}/api/organization/integrations`,
+          method: "GET",
+          authToken,
+        });
+
+        if (res.ok && res.data) {
+          setOrganization(res.data.organization);
+          setUserRole(res.data.userRole || 'member');
+          setEnabledIntegrations(res.data.enabledIntegrations || []);
+        }
+      } catch (e) {
+        console.error("Error loading organization info:", e);
+      }
+    }
+    if (isAuthenticated) {
+      loadOrgInfo();
+    }
+  }, [isAuthenticated, apiBase]);
+
+  // Load user stats when authenticated
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const { authToken } = await chrome.storage.local.get(['authToken']);
+        if (!authToken) return;
+
+        const res = await chrome.runtime.sendMessage({
+          type: "PING_API",
+          url: `${apiBase}/api/user/stats`,
+          method: "GET",
+          authToken,
+        });
+
+        if (res.ok && res.data) {
+          setUserStats(res.data);
+        }
+      } catch (e) {
+        console.error("Error loading stats:", e);
+      }
+    }
+    if (isAuthenticated) {
+      loadStats();
+    }
+  }, [isAuthenticated, apiBase, response]);
+
   // Sync tempContext with userContext when it changes
   useEffect(() => {
     setTempContext(userContext);
   }, [userContext]);
 
-  // Save user context to storage
+  // Save user context to storage and database
   async function saveUserContext(context: UserContext) {
     try {
+      // Save to local storage
       await chrome.storage.local.set({ userContext: context });
       setUserContext(context);
+
+      // Sync to database
+      const { authToken } = await chrome.storage.local.get(['authToken']);
+      if (authToken) {
+        await chrome.runtime.sendMessage({
+          type: "PING_API",
+          url: `${apiBase}/api/user/context`,
+          method: "PUT",
+          body: { userContext: context },
+          authToken,
+        });
+      }
     } catch (e) {
       console.error("Error saving context:", e);
     }
@@ -1106,6 +1181,183 @@ function Popup() {
               </div>
             </div>
 
+        {/* User Stats Card */}
+        {userStats && !actionType && !response && (
+          <div style={{
+            background: "white",
+            padding: "16px",
+            borderRadius: 12,
+            marginBottom: 16,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb"
+          }}>
+            <h3 style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#0f172a",
+              margin: "0 0 12px 0"
+            }}>
+              {userStats.teamStats ? '📊 Team Activity' : '📈 Your Activity'}
+            </h3>
+
+            {/* Individual/Member Stats */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+              marginBottom: userStats.teamStats ? 12 : 0
+            }}>
+              <div style={{
+                background: "#f0f9ff",
+                padding: "10px",
+                borderRadius: 8,
+                border: "1px solid #bae6fd"
+              }}>
+                <div style={{
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: "#0284c7",
+                  marginBottom: 2
+                }}>
+                  {userStats.userStats?.analysesCount || 0}
+                </div>
+                <div style={{
+                  fontSize: 10,
+                  color: "#0c4a6e",
+                  fontWeight: 600
+                }}>
+                  Profile{userStats.userStats?.analysesCount === 1 ? '' : 's'} Analyzed
+                </div>
+              </div>
+
+              <div style={{
+                background: "#f0fdf4",
+                padding: "10px",
+                borderRadius: 8,
+                border: "1px solid #bbf7d0"
+              }}>
+                <div style={{
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: "#16a34a",
+                  marginBottom: 2
+                }}>
+                  {userStats.userStats?.emailsCount || 0}
+                </div>
+                <div style={{
+                  fontSize: 10,
+                  color: "#14532d",
+                  fontWeight: 600
+                }}>
+                  Email{userStats.userStats?.emailsCount === 1 ? '' : 's'} Drafted
+                </div>
+              </div>
+            </div>
+
+            {/* Team Stats for Org Admins */}
+            {userStats.teamStats && (
+              <>
+                <div style={{
+                  borderTop: "1px solid #e5e7eb",
+                  paddingTop: 12,
+                  marginTop: 12
+                }}>
+                  <div style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#64748b",
+                    marginBottom: 8
+                  }}>
+                    Team Overview
+                  </div>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: 8
+                  }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#8b5cf6"
+                      }}>
+                        {userStats.teamStats.activeMembers}
+                      </div>
+                      <div style={{
+                        fontSize: 9,
+                        color: "#64748b"
+                      }}>
+                        Member{userStats.teamStats.activeMembers === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#0284c7"
+                      }}>
+                        {userStats.teamStats.totalAnalyses}
+                      </div>
+                      <div style={{
+                        fontSize: 9,
+                        color: "#64748b"
+                      }}>
+                        Total Analyses
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#16a34a"
+                      }}>
+                        {userStats.teamStats.totalEmails}
+                      </div>
+                      <div style={{
+                        fontSize: 9,
+                        color: "#64748b"
+                      }}>
+                        Total Emails
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Recent Activity */}
+            {userStats.userStats?.recentAnalyses && userStats.userStats.recentAnalyses.length > 0 && (
+              <div style={{
+                borderTop: "1px solid #e5e7eb",
+                paddingTop: 10,
+                marginTop: 10
+              }}>
+                <div style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#64748b",
+                  marginBottom: 6
+                }}>
+                  Recent Analyses
+                </div>
+                {userStats.userStats.recentAnalyses.map((analysis: any, idx: number) => (
+                  <div key={idx} style={{
+                    fontSize: 10,
+                    color: "#475569",
+                    marginBottom: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}>
+                    <span style={{ color: "#0ea5e9" }}>•</span>
+                    {analysis.profile_name || 'Unknown'}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Selection */}
         {!actionType && !response && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1842,6 +2094,10 @@ function Popup() {
 
   // Integrations Page Component
   const renderIntegrationsPage = () => {
+    const isIndividual = organization && organization.account_type === 'individual';
+    const isOrgMember = organization && organization.account_type === 'organization';
+    const isOrgAdmin = isOrgMember && userRole === 'org_admin';
+
     return (
       <div>
         <div style={{
@@ -1866,174 +2122,246 @@ function Popup() {
             margin: 0,
             lineHeight: 1.5
           }}>
-            Connect your tools to streamline your workflow.
+            {isIndividual 
+              ? `Connect your tools to streamline your workflow.`
+              : isOrgAdmin
+              ? `Manage integrations for your organization from the web dashboard.`
+              : `Your organization admin manages which integrations are available to your team.`}
           </p>
         </div>
+
+        {/* Admin link for org admins */}
+        {isOrgAdmin && (
+          <div style={{
+            background: "#eff6ff",
+            border: "1px solid #93c5fd",
+            padding: "12px 16px",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12,
+            color: "#1e40af",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}>
+            <span>Enable integrations for your team</span>
+            <a
+              href={`${apiBase}/admin/organization`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 11,
+                padding: "4px 10px",
+                background: "#3b82f6",
+                color: "white",
+                borderRadius: 6,
+                fontWeight: 600,
+                textDecoration: "none"
+              }}
+            >
+              Open Dashboard
+            </a>
+          </div>
+        )}
+
+        {/* Org member status */}
+        {isOrgMember && !isOrgAdmin && enabledIntegrations.length > 0 && (
+          <div style={{
+            background: "#d1fae5",
+            border: "1px solid #6ee7b7",
+            padding: "12px 16px",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12,
+            color: "#065f46"
+          }}>
+            ✓ Your organization has <strong>{enabledIntegrations.length}</strong> integration{enabledIntegrations.length !== 1 ? 's' : ''} enabled: {enabledIntegrations.join(', ')}
+          </div>
+        )}
+
+        {/* No integrations for org members */}
+        {isOrgMember && !isOrgAdmin && enabledIntegrations.length === 0 && (
+          <div style={{
+            background: "#fef3c7",
+            border: "1px solid #fcd34d",
+            padding: "12px 16px",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12,
+            color: "#92400e"
+          }}>
+            No integrations enabled yet. Ask your organization admin to enable integrations.
+          </div>
+        )}
 
         {/* Email Integration */}
-        <div style={{
-          background: "white",
-          padding: "20px",
-          borderRadius: 12,
-          marginBottom: 12,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e5e7eb"
-        }}>
+        {(isIndividual || !isOrgMember) && (
           <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20
-              }}>
-                📧
-              </div>
-              <div>
-                <h3 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  margin: "0 0 2px 0"
-                }}>
-                  Email Integration
-                </h3>
-                <p style={{
-                  fontSize: 11,
-                  color: "#64748b",
-                  margin: 0
-                }}>
-                  Gmail, Outlook, and more
-                </p>
-              </div>
-            </div>
-            <span style={{
-              fontSize: 11,
-              padding: "4px 10px",
-              background: "#fef3c7",
-              color: "#92400e",
-              borderRadius: 6,
-              fontWeight: 600
-            }}>
-              Coming Soon
-            </span>
-          </div>
-          <p style={{
-            fontSize: 12,
-            color: "#64748b",
+            background: "white",
+            padding: "20px",
+            borderRadius: 12,
             marginBottom: 12,
-            lineHeight: 1.5
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb"
           }}>
-            Send drafted emails directly from the extension to your email client.
-          </p>
-          <button
-            disabled
-            style={{
-              width: "100%",
-              padding: "10px",
-              background: "#f1f5f9",
-              color: "#94a3b8",
-              border: "1px solid #e2e8f0",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "not-allowed"
-            }}
-          >
-            Connect Email
-          </button>
-        </div>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20
+                }}>
+                  📧
+                </div>
+                <div>
+                  <h3 style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    margin: "0 0 2px 0"
+                  }}>
+                    Email Integration
+                  </h3>
+                  <p style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    margin: 0
+                  }}>
+                    Gmail, Outlook, and more
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 11,
+                padding: "4px 10px",
+                background: "#fef3c7",
+                color: "#92400e",
+                borderRadius: 6,
+                fontWeight: 600
+              }}>
+                Coming Soon
+              </span>
+            </div>
+            <p style={{
+              fontSize: 12,
+              color: "#64748b",
+              marginBottom: 12,
+              lineHeight: 1.5
+            }}>
+              Send drafted emails directly from the extension to your email client.
+            </p>
+            <button
+              disabled
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: "#f1f5f9",
+                color: "#94a3b8",
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "not-allowed"
+              }}
+            >
+              Connect Email
+            </button>
+          </div>
+        )}
 
         {/* CRM Integration */}
-        <div style={{
-          background: "white",
-          padding: "20px",
-          borderRadius: 12,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e5e7eb"
-        }}>
+        {(isIndividual || !isOrgMember) && (
           <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12
+            background: "white",
+            padding: "20px",
+            borderRadius: 12,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20
-              }}>
-                🔗
-              </div>
-              <div>
-                <h3 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  margin: "0 0 2px 0"
-                }}>
-                  CRM Integration
-                </h3>
-                <p style={{
-                  fontSize: 11,
-                  color: "#64748b",
-                  margin: 0
-                }}>
-                  Salesforce, HubSpot, and more
-                </p>
-              </div>
-            </div>
-            <span style={{
-              fontSize: 11,
-              padding: "4px 10px",
-              background: "#fef3c7",
-              color: "#92400e",
-              borderRadius: 6,
-              fontWeight: 600
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12
             }}>
-              Coming Soon
-            </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20
+                }}>
+                  🔗
+                </div>
+                <div>
+                  <h3 style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    margin: "0 0 2px 0"
+                  }}>
+                    CRM Integration
+                  </h3>
+                  <p style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    margin: 0
+                  }}>
+                    Salesforce, HubSpot, and more
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 11,
+                padding: "4px 10px",
+                background: "#fef3c7",
+                color: "#92400e",
+                borderRadius: 6,
+                fontWeight: 600
+              }}>
+                Coming Soon
+              </span>
+            </div>
+            <p style={{
+              fontSize: 12,
+              color: "#64748b",
+              marginBottom: 12,
+              lineHeight: 1.5
+            }}>
+              Automatically sync analyzed profiles and activities to your CRM.
+            </p>
+            <button
+              disabled
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: "#f1f5f9",
+                color: "#94a3b8",
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "not-allowed"
+              }}
+            >
+              Connect CRM
+            </button>
           </div>
-          <p style={{
-            fontSize: 12,
-            color: "#64748b",
-            marginBottom: 12,
-            lineHeight: 1.5
-          }}>
-            Automatically sync analyzed profiles and activities to your CRM.
-          </p>
-          <button
-            disabled
-            style={{
-              width: "100%",
-              padding: "10px",
-              background: "#f1f5f9",
-              color: "#94a3b8",
-              border: "1px solid #e2e8f0",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "not-allowed"
-            }}
-          >
-            Connect CRM
-          </button>
-        </div>
+        )}
       </div>
     );
   };
@@ -2145,14 +2473,59 @@ function Popup() {
               }}>
                 Sales Curiosity
               </h1>
-              <p style={{
-                fontSize: 10,
-                color: "#64748b",
-                margin: 0,
-                fontWeight: 500
-              }}>
-                {user?.email || "Logged in"}
-              </p>
+              {organization ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  {organization.account_type === 'individual' ? (
+                    <span style={{
+                      fontSize: 9,
+                      color: "#0ea5e9",
+                      fontWeight: 600,
+                      background: "#f0f9ff",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      border: "1px solid #bae6fd"
+                    }}>
+                      👤 Personal
+                    </span>
+                  ) : (
+                    <>
+                      <span style={{
+                        fontSize: 9,
+                        color: "#8b5cf6",
+                        fontWeight: 600,
+                        background: "#f5f3ff",
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        border: "1px solid #ddd6fe"
+                      }}>
+                        🏢 {organization.name}
+                      </span>
+                      {userRole === 'org_admin' && (
+                        <span style={{
+                          fontSize: 9,
+                          color: "#dc2626",
+                          fontWeight: 700,
+                          background: "#fef2f2",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          border: "1px solid #fecaca"
+                        }}>
+                          ADMIN
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p style={{
+                  fontSize: 10,
+                  color: "#64748b",
+                  margin: 0,
+                  fontWeight: 500
+                }}>
+                  {user?.email || "Logged in"}
+                </p>
+              )}
             </div>
           </div>
           <button
