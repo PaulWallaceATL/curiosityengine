@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { profileData, linkedinUrl } = body;
+    const { profileData, linkedinUrl, action = 'analyze', userContext, emailContext } = body;
 
     if (!profileData) {
       return NextResponse.json(
@@ -73,10 +73,58 @@ export async function POST(req: NextRequest) {
 
     console.log('Building AI prompt with context length:', contextText.length);
 
-    // Create a prompt for AI analysis
-    const prompt = `You are an expert sales intelligence assistant. Analyze this LinkedIn profile and provide insightful, actionable intelligence for a sales professional.
+    // Add user context if provided
+    let userContextText = '';
+    if (userContext?.aboutMe || userContext?.objectives) {
+      userContextText = '\n\n**Your Context:**\n';
+      if (userContext.aboutMe) {
+        userContextText += `About You: ${userContext.aboutMe}\n`;
+      }
+      if (userContext.objectives) {
+        userContextText += `Your Objectives: ${userContext.objectives}\n`;
+      }
+    }
 
+    // Create different prompts based on action type
+    let prompt: string;
+    
+    if (action === 'email') {
+      // Email drafting prompt
+      let emailInstructions = '';
+      if (emailContext) {
+        emailInstructions = `\n\nSpecific Instructions for this Email:\n${emailContext}`;
+      }
+
+      prompt = `You are an expert sales email writer. Draft a personalized, professional outreach email to this LinkedIn prospect.
+
+**Prospect's Profile:**
 ${contextText}
+${userContextText}
+${emailInstructions}
+
+Please draft a complete email with:
+- A compelling subject line
+- Personalized greeting
+- Opening that references something specific from their profile
+- Value proposition that aligns with their role/industry
+- Clear but soft call-to-action
+- Professional closing
+
+Keep the tone conversational, authentic, and focused on providing value. The email should be 150-200 words. Make it feel personal, not templated.
+
+Format your response exactly as follows:
+
+**Subject:** [subject line]
+
+**Email:**
+[email body]`;
+    } else {
+      // Analysis prompt (default)
+      prompt = `You are an expert sales intelligence assistant. Analyze this LinkedIn profile and provide insightful, actionable intelligence for a sales professional.
+
+**Prospect's Profile:**
+${contextText}
+${userContextText}
 
 Based on this LinkedIn profile information, please provide:
 
@@ -96,6 +144,7 @@ Based on their role and industry, what challenges might they be facing that your
 2-3 personalized, natural opening lines you could use to start a conversation or send a connection request.
 
 Be specific and actionable. If information is limited, focus on what you can infer from the available data.`;
+    }
 
     // Check if we should use mock mode
     const useMock = process.env.USE_MOCK_AI === '1' || process.env.NEXT_PUBLIC_MOCK_AI === '1';
@@ -105,8 +154,29 @@ Be specific and actionable. If information is limited, focus on what you can inf
     if (useMock) {
       console.log('🧪 Using MOCK AI response (set USE_MOCK_AI=0 to use real OpenAI)');
       
-      // Generate a realistic mock response based on the data we have
-      analysis = `**1. Executive Summary**
+      // Generate different mock responses based on action type
+      if (action === 'email') {
+        analysis = `**Subject:** ${profileData.name ? `Quick question about ${profileData.headline?.split('|')[0].trim() || 'your work'}` : 'Exploring collaboration opportunities'}
+
+**Email:**
+
+Hi ${profileData.name?.split(' ')[0] || 'there'},
+
+I came across your profile and was impressed by your work in ${profileData.headline ? profileData.headline.split('|')[0].trim().toLowerCase() : 'your field'}. ${profileData.location ? `Being based in ${profileData.location}, you're ` : 'You're '}likely facing some interesting challenges in ${profileData.headline?.includes('AI') ? 'scaling AI solutions' : profileData.headline?.includes('healthcare') ? 'healthcare innovation' : 'your industry'}.
+
+${userContext?.aboutMe ? `As someone working in ${userContext.aboutMe.split(',')[0]}, ` : ''}I've been helping ${profileData.headline?.includes('CMO') ? 'marketing leaders' : profileData.headline?.includes('CEO') ? 'executives' : 'professionals like you'} ${userContext?.objectives || 'achieve their business goals'}.${emailContext ? ` ${emailContext.substring(0, 100)}` : ''}
+
+Would you be open to a brief call to explore how we might be able to help? I have some specific ideas that could be relevant to your work${profileData.headline ? ` in ${profileData.headline.toLowerCase()}` : ''}.
+
+Looking forward to connecting!
+
+Best regards
+
+---
+*Note: This is a MOCK email generated for testing. To use real AI, add OpenAI credits and set USE_MOCK_AI=0 in your .env.local file.*`;
+      } else {
+        // Generate analysis mock response
+        analysis = `**1. Executive Summary**
 ${profileData.name || 'This professional'} is ${profileData.headline || 'a professional in their field'}${profileData.location ? ` based in ${profileData.location}` : ''}. They appear to be an experienced professional with a strong background in their industry.
 
 **2. Key Insights**
@@ -140,6 +210,7 @@ ${profileData.name || 'This professional'} is ${profileData.headline || 'a profe
 
 ---
 *Note: This is a MOCK response generated for testing. To use real AI analysis, add OpenAI credits and set USE_MOCK_AI=0 in your .env.local file.*`;
+      }
     } else {
       console.log('Sending to OpenAI for analysis...');
       console.log('OpenAI API Key present:', !!process.env.OPENAI_API_KEY);
