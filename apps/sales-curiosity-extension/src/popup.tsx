@@ -1044,7 +1044,8 @@ function Popup() {
                 fontSize: 12,
                 fontFamily: "inherit",
                 resize: "vertical",
-                outline: "none"
+                outline: "none",
+                boxSizing: "border-box"
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = "#0ea5e9";
@@ -1488,7 +1489,8 @@ function Popup() {
               fontSize: 12,
               fontFamily: "inherit",
               resize: "vertical",
-              outline: "none"
+              outline: "none",
+              boxSizing: "border-box"
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#0ea5e9";
@@ -1532,7 +1534,8 @@ function Popup() {
               fontSize: 12,
               fontFamily: "inherit",
               resize: "vertical",
-              outline: "none"
+              outline: "none",
+              boxSizing: "border-box"
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#0ea5e9";
