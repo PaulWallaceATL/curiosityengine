@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
+import { Logo, LogoSmall } from "./components/Logo";
 
 type Page = "home" | "context" | "integrations";
 type ActionType = "analyze" | "email";
@@ -479,18 +480,12 @@ function Popup() {
         }}>
           <div style={{ textAlign: "center" }}>
             <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 28,
               marginBottom: 12,
+              display: "inline-flex",
+              borderRadius: 14,
               boxShadow: "0 6px 16px rgba(14, 165, 233, 0.3)"
             }}>
-              🤖
+              <Logo size={56} />
             </div>
             <h1 style={{
               fontSize: 22,
@@ -1998,17 +1993,13 @@ function Popup() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
-              width: 40,
-              height: 40,
               borderRadius: 10,
-              background: "linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
               boxShadow: "0 4px 12px rgba(14, 165, 233, 0.3)"
             }}>
-              🤖
+              <Logo size={40} />
             </div>
             <div>
               <h1 style={{

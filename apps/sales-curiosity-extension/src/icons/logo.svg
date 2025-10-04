@@ -1,0 +1,41 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="62" fill="url(#mainGradient)"/>
+  
+  <!-- SC letters - modern, bold design -->
+  <text
+    x="64"
+    y="82"
+    font-size="56"
+    font-weight="700"
+    fill="white"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif"
+  >SC</text>
+  
+  <!-- Sparkle accent - top right -->
+  <circle cx="98" cy="30" r="5" fill="url(#accentGradient)"/>
+  <path
+    d="M 98 22 L 98 38 M 90 30 L 106 30"
+    stroke="url(#accentGradient)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+  
+  <!-- AI indicator dots - bottom -->
+  <circle cx="50" cy="102" r="3" fill="white" opacity="0.8"/>
+  <circle cx="64" cy="102" r="3" fill="white" opacity="0.8"/>
+  <circle cx="78" cy="102" r="3" fill="white" opacity="0.8"/>
+</svg>
+
