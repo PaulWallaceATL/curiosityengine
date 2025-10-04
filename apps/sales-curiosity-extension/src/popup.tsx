@@ -263,7 +263,7 @@ function Popup() {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('🤖 Sales Intelligence Report', margin, 45);
+      doc.text('Sales Intelligence Report', margin, 45);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.text('AI-Powered LinkedIn Analysis by Sales Curiosity', margin, 70);
