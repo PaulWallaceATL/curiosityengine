@@ -12,23 +12,30 @@ export default function DashboardPage() {
   }, []);
 
   async function checkAuthAndRedirect() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (!user) {
+    if (!session) {
       // Not authenticated - redirect to login
       router.push('/login');
       return;
     }
 
-    // Get user's role
-    const { data: userData } = await supabase
+    // Get user's role from our database
+    const { data: userData, error } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .single();
 
+    // If user doesn't exist in our database, sign out and redirect to signup
+    if (error || !userData) {
+      await supabase.auth.signOut();
+      router.push('/signup');
+      return;
+    }
+
     // Redirect based on role
-    if (userData?.role === 'org_admin' || userData?.role === 'super_admin') {
+    if (userData.role === 'org_admin' || userData.role === 'super_admin') {
       router.push('/admin/organization');
     } else {
       router.push('/'); // Regular users go to home

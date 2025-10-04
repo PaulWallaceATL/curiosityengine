@@ -32,15 +32,21 @@ export default function LoginPage() {
         throw error;
       }
 
-      // Check user role and redirect appropriately
-      const { data: userData } = await supabase
+      // Verify user exists in our database
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('role')
         .eq('id', data.user.id)
         .single();
 
+      // If user doesn't exist in our database, sign them out and show error
+      if (userError || !userData) {
+        await supabase.auth.signOut();
+        throw new Error('Account setup incomplete. Please sign up again.');
+      }
+
       // Redirect based on role
-      if (userData?.role === 'org_admin' || userData?.role === 'super_admin') {
+      if (userData.role === 'org_admin' || userData.role === 'super_admin') {
         router.push('/admin/organization');
       } else {
         router.push('/'); // Home page for regular users

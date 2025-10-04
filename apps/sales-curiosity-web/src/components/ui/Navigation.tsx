@@ -37,13 +37,17 @@ export default function Navigation() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('users')
           .select('role, organization_id')
           .eq('id', session.user.id)
           .single();
         
-        if (data) {
+        // If user doesn't exist in our database, sign them out
+        if (error || !data) {
+          await supabase.auth.signOut();
+          setUserData(null);
+        } else {
           setUserData(data as UserData);
         }
       } else {
@@ -51,6 +55,7 @@ export default function Navigation() {
       }
     } catch (error) {
       console.error('Error checking user:', error);
+      await supabase.auth.signOut();
       setUserData(null);
     } finally {
       setLoading(false);

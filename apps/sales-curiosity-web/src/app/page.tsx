@@ -25,7 +25,26 @@ export default function Home() {
 
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
-    setIsAuthenticated(!!session);
+    
+    if (!session) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    // Check if user exists in our users table
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', session.user.id)
+      .single();
+
+    // Only authenticate if user exists in our database
+    if (error || !userData) {
+      await supabase.auth.signOut();
+      setIsAuthenticated(false);
+    } else {
+      setIsAuthenticated(true);
+    }
   }
 
   // Loading state
