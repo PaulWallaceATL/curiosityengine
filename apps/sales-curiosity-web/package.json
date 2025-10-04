@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^140.0.0",
     "@supabase/supabase-js": "^2.58.0",
+    "docx": "^9.5.1",
     "next": "15.3.2",
     "openai": "^6.1.0",
+    "puppeteer-core": "^24.23.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "styled-jsx": "5.1.1",
